@@ -72,12 +72,13 @@ export async function POST(request: NextRequest) {
 
     await sql`
       INSERT INTO photos (id, code, annotate_code, filename, originalname, filepath, user_id)
-      VALUES (${id}, ${code}, ${annotateCode}, ${pathname}, ${file.name}, ${url}, ${userId})
+      VALUES (${id}, ${code}, ${annotateCode}, ${file.name}, ${file.name}, ${url}, ${userId})
     `;
 
     return NextResponse.json({ id, code });
   } catch (error) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: '上传失败' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : '上传失败';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
