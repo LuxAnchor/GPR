@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 
+export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
+
 function getUserId(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -12,33 +15,32 @@ function getUserId(request: NextRequest): string | null {
   return decoded?.userId || null;
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   try {
     const userId = getUserId(request);
     if (!userId) {
       return NextResponse.json({ error: '未授权' }, { status: 401 });
     }
 
-    const { id } = await params;
     const { x, y, width, height, name } = await request.json();
 
     const faces = await sql`
-      SELECT f.* FROM faces f
-      JOIN photos p ON f.photo_id = p.id
-      WHERE f.id = ${id} AND p.user_id = ${userId}
+      SELECT f.* FROM faces f JOIN photos p ON f.photo_id = p.id WHERE f.id = ${params.id} AND p.user_id = ${userId}
     `;
-
-    if (faces.length === 0) {
+    if (!faces || faces.length === 0) {
       return NextResponse.json({ error: '人脸标注不存在' }, { status: 404 });
     }
 
     await sql`
-      UPDATE faces 
-      SET x = ${x}, y = ${y}, width = ${width}, height = ${height}, name = ${name || ''}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${id}
+      UPDATE faces SET
+        x = ${Number(x)},
+        y = ${Number(y)},
+        width = ${Number(width)},
+        height = ${Number(height)},
+        name = ${name || ''},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${params.id}
     `;
 
     return NextResponse.json({ success: true });
@@ -48,29 +50,22 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   try {
     const userId = getUserId(request);
     if (!userId) {
       return NextResponse.json({ error: '未授权' }, { status: 401 });
     }
 
-    const { id } = await params;
-
     const faces = await sql`
-      SELECT f.* FROM faces f
-      JOIN photos p ON f.photo_id = p.id
-      WHERE f.id = ${id} AND p.user_id = ${userId}
+      SELECT f.* FROM faces f JOIN photos p ON f.photo_id = p.id WHERE f.id = ${params.id} AND p.user_id = ${userId}
     `;
-
-    if (faces.length === 0) {
+    if (!faces || faces.length === 0) {
       return NextResponse.json({ error: '人脸标注不存在' }, { status: 404 });
     }
 
-    await sql`DELETE FROM faces WHERE id = ${id}`;
+    await sql`DELETE FROM faces WHERE id = ${params.id}`;
 
     return NextResponse.json({ success: true });
   } catch (error) {

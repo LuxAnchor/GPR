@@ -15,6 +15,8 @@ export interface Photo {
   filepath: string;
   islocked: number;
   user_id: string;
+  view_code: string | null;
+  annotate_view_code: string | null;
   created_at: string;
   updated_at: string;
 }

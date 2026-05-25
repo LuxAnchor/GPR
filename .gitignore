@@ -32,3 +32,6 @@ uploads/
 .env
 .env.local
 .env.*.local
+
+# Next.js
+.next/
