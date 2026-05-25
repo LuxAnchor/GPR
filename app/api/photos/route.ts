@@ -4,6 +4,9 @@ import { verifyToken } from '@/lib/auth';
 import { generateUUID, generateSecureCode, generateAnnotateCode } from '@/lib/utils';
 import { uploadFile } from '@/lib/storage';
 
+export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
+
 function getUserId(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
