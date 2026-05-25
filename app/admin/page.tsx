@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Camera, LogOut, Upload, Lock, Unlock, Eye, Edit, Trash2, Download } from 'lucide-react';
+import { Camera, LogOut, Upload, Lock, Unlock, Eye, Edit, Trash2, Download, AlertCircle } from 'lucide-react';
 
 interface Photo {
   id: string;
@@ -16,12 +16,15 @@ interface Photo {
   faces: any[];
 }
 
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024;
+
 export default function AdminPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -82,6 +85,12 @@ export default function AdminPage() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setShowSizeWarning(true);
+      e.target.value = '';
+      return;
+    }
 
     const token = localStorage.getItem('auth_token');
     if (!token) return;
@@ -200,7 +209,26 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
+      {showSizeWarning && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mx-4 mt-4">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5" />
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                <strong>文件过大！</strong> Vercel 免费版限制上传文件最大 <strong>4.5MB</strong>。
+                请压缩图片后重试（建议分辨率 1920x1080 以下，文件小于 2MB）。
+              </p>
+              <button
+                onClick={() => setShowSizeWarning(false)}
+                className="mt-2 text-sm text-yellow-600 hover:text-yellow-800"
+              >
+                知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
@@ -236,7 +264,6 @@ export default function AdminPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
@@ -249,6 +276,7 @@ export default function AdminPage() {
             <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">还没有照片</h3>
             <p className="text-gray-600 mb-6">点击上方"上传照片"按钮开始管理您的毕业合照</p>
+            <p className="text-sm text-gray-500">💡 提示：上传照片建议小于 4.5MB</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
