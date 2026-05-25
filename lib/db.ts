@@ -3,8 +3,7 @@ import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL!);
 
 export async function query<T = any>(strings: TemplateStringsArray, ...values: any[]): Promise<T[]> {
-  const query = strings.reduce((acc, str, i) => acc + str + (values[i] ? `$${i}` : ''), '');
-  const result = await sql(query, values);
+  const result = await sql(strings, ...values);
   return result as T[];
 }
 
