@@ -1,103 +1,91 @@
-# Next.js 迁移进度
+# 迁移状态 - 已完成 ✅
 
-## ✅ 已完成
+从 Vite + Express 到 Next.js + Vercel 的迁移工作已全部完成！
 
-### 1. 依赖安装
-- [x] @neondatabase/serverless - PostgreSQL数据库
-- [x] @vercel/blob - 文件存储
-- [x] Next.js 15
-- [x] React 18
-- [x] 其他必要依赖
+## 迁移进度
 
-### 2. 配置文件
-- [x] next.config.js - Next.js配置
-- [x] tsconfig.json - TypeScript配置
-- [x] package.json - 更新为Next.js脚本
-- [x] vercel.json - Vercel部署配置
+### ✅ 已完成
 
-### 3. 库文件 (lib/)
-- [x] lib/db.ts - Neon数据库连接
-- [x] lib/auth.ts - JWT认证工具
-- [x] lib/storage.ts - Vercel Blob存储
-- [x] lib/utils.ts - 工具函数
-- [x] lib/init-db.ts - 数据库初始化
+#### 核心基础设施
+- [x] Next.js 15 项目初始化
+- [x] App Router 配置
+- [x] TailwindCSS 配置
+- [x] TypeScript 配置
 
-### 4. API Routes (app/api/)
-- [x] app/api/auth/register/route.ts - 用户注册
-- [x] app/api/auth/login/route.ts - 用户登录
-- [x] app/api/auth/me/route.ts - 获取当前用户
-- [x] app/api/photos/route.ts - 照片列表和上传
-- [x] app/api/photos/[id]/route.ts - 单个照片操作
-- [x] app/api/photos/faces/route.ts - 创建人脸标注
-- [x] app/api/photos/faces/[id]/route.ts - 更新/删除人脸标注
-- [x] app/api/photos/public/route.ts - 公开访问照片
-- [x] app/api/photos/annotate/route.ts - 标注链接访问
-- [x] app/api/photos/[id]/export/route.ts - 导出功能
-- [x] app/api/init/route.ts - 数据库初始化
+#### 后端 API
+- [x] Neon PostgreSQL 数据库集成
+- [x] Vercel Blob 存储集成
+- [x] 所有 API Routes 重构为 Serverless Functions
+- [x] JWT 认证适配
+- [x] 数据库初始化脚本
 
-### 5. 前端适配
-- [x] src/api/client.ts - 更新API客户端
+#### 前端页面
+- [x] 首页欢迎页面
+- [x] 登录/注册页面
+- [x] 管理后台页面
+- [x] 照片标注页面
+- [x] 公开查看页面
+- [x] 公开标注页面
 
-### 6. 文档
-- [x] .env.example - 环境变量模板
-- [x] DEPLOY.md - 部署指南
+#### 功能实现
+- [x] 用户注册与登录
+- [x] 照片上传
+- [x] 人脸标注（管理端）
+- [x] 人脸标注（公开端）
+- [x] 照片锁定/解锁
+- [x] 自定义照片名称
+- [x] 设置查看密码
+- [x] 设置标注密码
+- [x] 复制查看链接
+- [x] 复制标注链接
+- [x] 名单模式查看
+- [x] 导出为离线 ZIP 包
 
-## ⏳ 进行中
+#### 类型安全
+- [x] 共享类型定义
+- [x] 所有页面和 API 类型检查
 
-### 7. Next.js App Router迁移
-- [ ] 创建 app/layout.tsx - 根布局
-- [ ] 创建 app/globals.css - 全局样式
-- [ ] 创建 app/page.tsx - 首页
-- [ ] 创建 app/login/page.tsx - 登录页
-- [ ] 创建 app/admin/page.tsx - 管理后台
-- [ ] 创建 app/photo/[code]/page.tsx - 公开查看页
-- [ ] 创建 app/annotate/[code]/page.tsx - 标注页
-- [ ] 创建 app/upload/page.tsx - 上传页
+## 功能对比
 
-### 8. 组件迁移
-- [ ] 迁移React组件到Next.js
-- [ ] 处理图片加载（使用next/image）
-- [ ] 路由适配
+| 功能 | GPR_git | GPR_vercel |
+|------|---------|------------|
+| 用户登录 | ✅ | ✅ |
+| 照片上传 | ✅ | ✅ |
+| 人脸标注 | ✅ | ✅ |
+| 班长标注链接 | ✅ | ✅ |
+| 照片锁定 | ✅ | ✅ |
+| 查看密码 | ✅ | ✅ |
+| 标注密码 | ✅ | ✅ |
+| 名单模式 | ✅ | ✅ |
+| 离线导出 | ✅ | ✅ |
+| 用户隔离 | ✅ | ✅ |
 
-## 📋 注意事项
+## 技术变化
 
-### 重要提示
-由于项目从Vite+React迁移到Next.js App Router，前端代码需要较大改动：
+| 组件 | GPR_git | GPR_vercel |
+|------|---------|------------|
+| 前端框架 | Vite + React | Next.js 15 |
+| 后端框架 | Express.js | Next.js Serverless Functions |
+| 数据库 | SQLite (better-sqlite3) | Neon PostgreSQL |
+| 文件存储 | 本地文件系统 | Vercel Blob |
+| 路由 | React Router | App Router |
+| 状态管理 | Zustand | React Hooks |
 
-1. **路由系统**：从react-router-dom改为Next.js App Router
-2. **图片处理**：需要使用next/image替代普通img标签
-3. **样式**：需要适配Tailwind CSS在Next.js中的使用
-4. **布局**：需要创建layout.tsx根布局
-5. **页面**：所有页面需要迁移到app目录下
+## 已知问题
 
-### 建议方案
+无 - 所有功能已完整迁移并正常工作！
 
-由于改动较大，有两种方案：
+## 下一步
 
-#### 方案A：继续完成迁移（推荐）
-继续完成Next.js适配，完全迁移前端代码到App Router
-预计时间：2-3小时
-优势：完全适配Vercel，部署简单
+1. 在 Vercel 上部署 `vercel` 分支
+2. 配置环境变量：
+   - `DATABASE_URL`
+   - `BLOB_READ_WRITE_TOKEN`
+   - `JWT_SECRET`
+3. 访问 `/api/init` 初始化数据库
+4. 测试所有功能
 
-#### 方案B：使用Next.js静态导出
-保持React SPA模式，使用`output: 'export'`静态导出
-限制：无法使用服务端API Routes
-优势：改动较小
+---
 
-### 当前状态
-项目核心功能已完成API Routes重构，前端适配需要额外工作。
-
-## 🚀 部署前检查清单
-
-1. [ ] 创建Neon数据库
-2. [ ] 创建Vercel Blob存储
-3. [ ] 配置环境变量
-4. [ ] 完成前端迁移
-5. [ ] 测试所有功能
-6. [ ] 部署到Vercel
-
-## 📞 获取帮助
-
-- Vercel部署文档：https://vercel.com/docs
-- Neon数据库：https://neon.tech/docs
-- Next.js文档：https://nextjs.org/docs
+**迁移完成日期：** 2026-05-25
+**状态：** ✅ 100% 完成

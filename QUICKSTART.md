@@ -1,146 +1,107 @@
-# 🚀 快速开始指南
+# 快速开始指南
 
-## 项目状态
+## 开发环境
 
-✅ **核心功能已完成Vercel适配**
-
-### 已完成部分
-- ✅ API Routes（后端）
-- ✅ 数据库集成（Neon PostgreSQL）
-- ✅ 文件存储（Vercel Blob）
-- ✅ 基础页面结构
-
-### 待完成部分
-- ⏳ 完整的前端页面迁移（管理后台、标注页面等）
-
----
-
-## 快速部署步骤
-
-### 1️⃣ 创建云服务资源
-
-#### Neon数据库
-1. 访问 https://neon.tech
-2. 注册账号并登录
-3. 创建新项目
-4. 复制连接字符串
-
-#### Vercel Blob存储
-1. 访问 https://vercel.com
-2. 创建新项目
-3. 进入Storage标签
-4. 创建Blob存储
-5. 复制访问令牌
-
-### 2️⃣ 配置环境变量
-
-在Vercel项目设置中添加：
+### 1. 克隆仓库
 
 ```bash
-DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx
-JWT_SECRET=your-32-char-secret-key
-```
-
-### 3️⃣ 部署
-
-#### 方式A：GitHub部署
-```bash
+git clone <your-repository>
 cd GPR_vercel
-git init
-git add .
-git commit -m "Initial commit"
-# 推送到GitHub，然后在Vercel导入
 ```
 
-#### 方式B：Vercel CLI
+### 2. 安装依赖
+
 ```bash
-npm i -g vercel
-cd GPR_vercel
-vercel
-vercel env add DATABASE_URL
-vercel env add BLOB_READ_WRITE_TOKEN
-vercel env add JWT_SECRET
-vercel --prod
+npm install
 ```
 
-### 4️⃣ 初始化数据库
+### 3. 配置环境变量
 
-部署成功后，访问：
-```
-https://your-app.vercel.app/api/init
-```
+创建 `.env.local` 文件：
 
-这将自动创建所有必要的数据库表。
-
-### 5️⃣ 开始使用
-
-1. 访问 https://your-app.vercel.app
-2. 注册账号
-3. 上传毕业合照
-4. 标注人脸
-5. 锁定并分享
-
----
-
-## 📁 项目结构
-
-```
-GPR_vercel/
-├── app/                    # Next.js App Router
-│   ├── api/               # API Routes (后端)
-│   │   ├── auth/         # 认证API
-│   │   ├── photos/        # 照片API
-│   │   └── init/          # 数据库初始化
-│   ├── layout.tsx         # 根布局
-│   ├── page.tsx           # 首页
-│   └── globals.css        # 全局样式
-├── lib/                    # 工具库
-│   ├── db.ts              # 数据库连接
-│   ├── auth.ts            # 认证工具
-│   ├── storage.ts          # 文件存储
-│   └── utils.ts            # 工具函数
-├── src/                    # React组件（待迁移）
-│   ├── components/        # UI组件
-│   ├── pages/             # 页面组件
-│   └── api/client.ts       # API客户端
-├── public/                 # 静态资源
-├── .env.example            # 环境变量模板
-├── DEPLOY.md              # 详细部署文档
-├── MIGRATION_STATUS.md     # 迁移进度
-└── package.json
+```bash
+DATABASE_URL=postgresql://...  # 你的 Neon 数据库连接字符串
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...  # 你的 Vercel Blob 令牌
+JWT_SECRET=your-super-secret-key-here  # 至少 32 位随机字符串
 ```
 
----
+### 4. 启动开发服务器
 
-## ❓ 常见问题
+```bash
+npm run dev
+```
 
-### Q: 数据库连接失败
-**A:** 检查DATABASE_URL格式是否正确，确保包含`?sslmode=require`
+访问 http://localhost:3000 查看应用。
 
-### Q: 文件上传失败
-**A:** 确认BLOB_READ_WRITE_TOKEN有效，Blob存储有足够配额
+### 5. 初始化数据库
 
-### Q: 部署失败
-**A:** 查看Vercel构建日志，确保所有环境变量已配置
+访问 http://localhost:3000/api/init 初始化数据库表结构。
 
-### Q: 前端页面不工作
-**A:** 当前核心功能已完成，前端迁移正在进行中
+## 生产部署
 
----
+### 1. 在 Vercel 上部署
 
-## 📚 更多文档
+1. 访问 https://vercel.com/new
+2. 导入你的 GitHub 仓库
+3. 选择 `vercel` 分支
+4. 配置环境变量：
+   - `DATABASE_URL`
+   - `BLOB_READ_WRITE_TOKEN`
+   - `JWT_SECRET`
+5. 点击 Deploy
 
-- **DEPLOY.md** - 详细部署指南
-- **MIGRATION_STATUS.md** - 迁移进度详情
+### 2. 部署后初始化
 
----
+部署成功后，访问 `https://your-app.vercel.app/api/init` 初始化数据库。
 
-## 🎯 下一步
+## 使用流程
 
-1. ✅ 部署到Vercel
-2. ✅ 配置环境变量
-3. ⏳ 等待前端迁移完成（或自行完成）
-4. 🚀 开始使用
+### 管理后台
 
-如需帮助，请查阅详细文档或提交Issue。
+1. 注册/登录账号
+2. 上传毕业合照
+3. 点击照片进行人脸标注
+4. 为每个人脸输入姓名
+5. 保存标注
+6. 锁定照片
+7. 分享链接或导出
+
+### 公开查看
+
+1. 打开分享的链接
+2. 输入密码和姓名（如设置）
+3. 点击头像查看姓名
+4. 切换到名单模式查看所有人员
+
+### 班长协作标注
+
+1. 复制标注链接
+2. 分享给班长
+3. 班长通过链接添加/修改标注
+4. 完成后管理员锁定照片
+
+## 常见问题
+
+### 图片无法上传？
+
+- 检查文件大小不超过 10MB
+- 确认 BLOB_READ_WRITE_TOKEN 正确配置
+- 查看浏览器控制台错误
+
+### 数据库错误？
+
+- 检查 DATABASE_URL 是否正确
+- 确认数据库已初始化（访问 /api/init）
+- 查看 Neon 控制台连接状态
+
+### 部署失败？
+
+- 检查 package.json 中的依赖
+- 确认 TypeScript 编译通过
+- 查看 Vercel 构建日志
+
+## 下一步
+
+- 阅读 [README.md](./README.md) 了解完整功能
+- 查看 [DEPLOY.md](./DEPLOY.md) 了解详细部署步骤
+- 查看 [MIGRATION_STATUS.md](./MIGRATION_STATUS.md) 了解迁移状态
