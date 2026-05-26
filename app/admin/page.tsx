@@ -27,7 +27,6 @@ interface Photo {
   annotate_view_code: string | null;
   user_id: string;
   faces: Face[];
-  imageUrl?: string;
 }
 
 export default function AdminPage() {
@@ -79,22 +78,7 @@ export default function AdminPage() {
       }
 
       const data = await response.json();
-      
-      const photosWithImages = await Promise.all(
-        data.map(async (photo: Photo) => {
-          const imageResponse = await fetch(`/api/photos/${photo.id}/image`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          
-          if (imageResponse.ok) {
-            const blob = await imageResponse.blob();
-            return { ...photo, imageUrl: URL.createObjectURL(blob) };
-          }
-          return photo;
-        })
-      );
-      
-      setPhotos(photosWithImages);
+      setPhotos(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -467,7 +451,7 @@ function PhotoCard({
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative h-48">
         <img
-          src={photo.imageUrl || photo.filepath}
+          src={`/api/photos/${photo.id}/image`}
           alt={photo.display_name || photo.originalname}
           className="w-full h-full object-cover"
         />

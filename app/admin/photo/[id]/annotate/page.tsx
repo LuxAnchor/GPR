@@ -38,7 +38,6 @@ export default function AnnotatePage() {
   const [saving, setSaving] = useState(false);
   const [faces, setFaces] = useState<Face[]>([]);
   const [selectedFace, setSelectedFace] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>('');
 
   useEffect(() => {
     loadPhoto();
@@ -67,15 +66,6 @@ export default function AnnotatePage() {
       const data = await response.json();
       setPhoto(data);
       setFaces(data.faces);
-
-      const imageResponse = await fetch(`/api/photos/${id}/image`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      if (imageResponse.ok) {
-        const blob = await imageResponse.blob();
-        setImageUrl(URL.createObjectURL(blob));
-      }
     } catch (err: any) {
       setError(err.message || '加载失败');
     } finally {
@@ -299,11 +289,10 @@ export default function AnnotatePage() {
               >
                 <img
                   ref={imageRef}
-                  src={imageUrl}
+                  src={`/api/photos/${photo.id}/image`}
                   alt={photo.display_name || photo.originalname}
                   className="w-full h-auto"
                   draggable={false}
-                  crossOrigin="anonymous"
                 />
 
                 {faces.map((face, index) => {
