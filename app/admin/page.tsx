@@ -273,9 +273,10 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       
+      const data = await response.json().catch(() => null);
+      
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || '导出失败');
+        throw new Error(data?.error || data?.details || `导出失败 (${response.status})`);
       }
 
       const blob = await response.blob();
@@ -294,7 +295,8 @@ export default function AdminPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(err.message);
+      console.error('Export error:', err);
+      alert(err.message || '导出失败，请重试');
     }
   };
 

@@ -3,7 +3,7 @@ import { sql } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import JSZip from 'jszip';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 function getUserId(request: NextRequest): string | null {
@@ -233,13 +233,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     try {
       const photoUrl = photo.filepath;
       const response = await fetch(photoUrl);
-      const photoBuffer = await response.arrayBuffer();
-      zip.file('photo.jpg', photoBuffer);
-    } catch (error) {
-      console.error('Error fetching photo:', error);
+      if (response.ok) {
+        const photoBuffer = await response.arrayBuffer();
+        zip.file('photo.jpg', photoBuffer);
+      } else {
+        console.error('Failed to fetch photo:', response.status, response.statusText);
+      }
+    } catch (fetchError) {
+      console.error('Error fetching photo from Blob:', fetchError);
     }
 
-    zip.file('说明.txt', `毕业照查看器\n\n使用说明：\n1. 解压zip文件\n2. 双击打开index.html\n3. 点击头像或名单查看对应人员\n4. 点击右上角"切换名单模式"查看完整名单\n\n生成时间：${new Date().toLocaleString()}`);
+    zip.file('说明.txt', `毕业照查看器\n\n使用说明：\n1. 解压zip文件\n2. 双击打开index.html\n3. 点击头像或名单查看对应人员\n4. 点击右上角"切换名单模式"查看完整名单\n\n照片: ${photo.display_name || photo.originalname}\n已标注人数: ${faces.length} 人\n生成时间：${new Date().toLocaleString()}`);
 
     const zipBuffer = await zip.generateAsync({ type: 'uint8array' });
 
@@ -252,6 +256,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     });
   } catch (error) {
     console.error('Export error:', error);
-    return NextResponse.json({ error: '导出失败' }, { status: 500 });
+    return NextResponse.json({ error: '导出失败', details: error instanceof Error ? error.message : '未知错误' }, { status: 500 });
   }
 }
