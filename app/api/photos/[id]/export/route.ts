@@ -178,8 +178,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         const response = await fetch(photo.filepath);
         if (response.ok) {
           const photoBuffer = await response.arrayBuffer();
-          const fileName = photo.filepath.split('/').pop() || 'photo.jpg';
-          zip.file(fileName, photoBuffer);
+          zip.file('photo.jpg', photoBuffer);
         }
       } catch (e) {
         console.log('Could not fetch photo file:', e);
