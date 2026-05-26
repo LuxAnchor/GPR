@@ -31,7 +31,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Graduation Photo</title>
+  <title>${photo.display_name || photo.originalname || 'Graduation Photo'}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; }
@@ -41,20 +41,46 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
     .face-box.highlight { border-color: #ef4444; border-width: 4px; z-index: 100; }
     .name-item:hover { background-color: #dbeafe; }
     .name-item.highlight { background-color: #fef2f2; color: #dc2626; font-weight: 600; }
+    .face-popup {
+      position: fixed;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      padding: 16px;
+      z-index: 1000;
+      text-align: center;
+      min-width: 120px;
+    }
+    .face-popup img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .face-popup .name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
   <div id="app" class="container mx-auto px-4 py-8">
     <div class="max-w-6xl mx-auto">
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">Graduation Photo</h1>
-        <button id="toggleMode" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Toggle List</button>
+        <h1 class="text-2xl font-bold text-gray-800">${photo.display_name || photo.originalname || 'Graduation Photo'}</h1>
+        <button id="toggleMode" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+          Toggle List
+        </button>
       </div>
+      
       <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <div id="photoContainer" class="relative inline-block">
           <img id="photo" src="photo.jpg" alt="Photo" />
         </div>
       </div>
+      
       <div id="nameList" class="mt-6 hidden">
         <div class="bg-white rounded-xl shadow-lg p-6">
           <h2 class="text-xl font-semibold text-gray-800 mb-4">Name List</h2>
@@ -63,13 +89,81 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       </div>
     </div>
   </div>
+  
   <script>
     const faces = ${facesData};
     let showNameList = false;
-    function init() { renderFaces(); renderNameList(); setupEventListeners(); }
+    let highlightedFaceId = null;
+    let currentPopup = null;
+    
+    function init() {
+      renderFaces();
+      renderNameList();
+      setupEventListeners();
+    }
+    
+    function getFaceThumbnail(face) {
+      const img = document.getElementById('photo');
+      if (!img.naturalWidth) return null;
+      
+      const scaleX = img.naturalWidth / img.offsetWidth;
+      const scaleY = img.naturalHeight / img.offsetHeight;
+      
+      const x = Math.round(face.x / scaleX);
+      const y = Math.round(face.y / scaleY);
+      const width = Math.round(face.width / scaleX);
+      const height = Math.round(face.height / scaleY);
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+      
+      return canvas.toDataURL('image/jpeg', 0.8);
+    }
+    
+    function showFacePopup(faceId, event) {
+      if (currentPopup) {
+        currentPopup.remove();
+      }
+      
+      const face = faces.find(f => f.id === faceId);
+      if (!face) return;
+      
+      const thumbnail = getFaceThumbnail(face);
+      
+      const popup = document.createElement('div');
+      popup.className = 'face-popup';
+      popup.innerHTML = '<img src="' + (thumbnail || 'data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\"><rect fill=\"%23ddd\" width=\"100\" height=\"100\"/></svg>') + '" alt="Face"/><div class="name">' + (face.name || 'No name') + '</div>';
+      
+      document.body.appendChild(popup);
+      
+      const rect = popup.getBoundingClientRect();
+      let left = event.clientX - rect.width / 2;
+      let top = event.clientY - rect.height - 20;
+      
+      if (left < 10) left = 10;
+      if (left + rect.width > window.innerWidth - 10) left = window.innerWidth - rect.width - 10;
+      if (top < 10) top = event.clientY + 20;
+      
+      popup.style.left = left + 'px';
+      popup.style.top = top + 'px';
+      
+      currentPopup = popup;
+    }
+    
+    function hidePopup() {
+      if (currentPopup) {
+        currentPopup.remove();
+        currentPopup = null;
+      }
+    }
+    
     function renderFaces() {
       const container = document.getElementById('photoContainer');
       const img = document.getElementById('photo');
+      
       img.onload = () => {
         faces.forEach(face => {
           const tag = document.createElement('div');
@@ -79,6 +173,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           tag.style.top = (face.y + face.height + 5) + 'px';
           tag.textContent = face.name || 'No name';
           container.appendChild(tag);
+          
           const box = document.createElement('div');
           box.className = 'face-box';
           box.id = 'box-' + face.id;
@@ -87,6 +182,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           box.style.width = face.width + 'px';
           box.style.height = face.height + 'px';
           container.appendChild(box);
+          
           const clickArea = document.createElement('div');
           clickArea.style.position = 'absolute';
           clickArea.style.left = face.x + 'px';
@@ -94,11 +190,16 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           clickArea.style.width = face.width + 'px';
           clickArea.style.height = face.height + 'px';
           clickArea.style.cursor = 'pointer';
-          clickArea.onclick = () => highlightFace(face.id);
+          clickArea.onclick = (e) => {
+            e.stopPropagation();
+            highlightFace(face.id);
+            showFacePopup(face.id, e);
+          };
           container.appendChild(clickArea);
         });
       };
     }
+    
     function renderNameList() {
       const grid = document.getElementById('nameGrid');
       faces.forEach(face => {
@@ -110,11 +211,15 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
         grid.appendChild(item);
       });
     }
+    
     function highlightFace(faceId) {
+      highlightedFaceId = faceId;
+      
       faces.forEach(face => {
         const tag = document.getElementById('tag-' + face.id);
         const box = document.getElementById('box-' + face.id);
         const nameItem = document.getElementById('name-' + face.id);
+        
         if (face.id === faceId) {
           tag?.classList.add('highlight');
           box?.classList.add('highlight');
@@ -126,12 +231,20 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
         }
       });
     }
+    
     function setupEventListeners() {
       document.getElementById('toggleMode').onclick = () => {
         showNameList = !showNameList;
         document.getElementById('nameList').classList.toggle('hidden', !showNameList);
       };
+      
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.face-popup') && !e.target.closest('#photoContainer')) {
+          hidePopup();
+        }
+      });
     }
+    
     init();
   </script>
 </body>
@@ -185,7 +298,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       }
     }
 
-    const readme = 'Graduation Photo Viewer\n\nInstructions:\n1. Extract zip\n2. Put your photo as photo.jpg\n3. Open index.html\n\nFaces: ' + faces.length;
+    const readme = 'Graduation Photo Viewer\n\nInstructions:\n1. Extract zip\n2. Put your photo as photo.jpg\n3. Open index.html\n4. Click on faces to see names\n\nFaces: ' + faces.length;
     zip.file('README.txt', readme);
 
     const zipBuffer = await zip.generateAsync({ type: 'uint8array' });
