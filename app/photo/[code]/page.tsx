@@ -244,7 +244,7 @@ export default function PublicPhotoPage() {
           <div className="relative" onClick={handleImageClick}>
             <img
               ref={imageRef}
-              src={photo.filepath}
+              src={`/api/photos/public/image?code=${photo.code}`}
               alt={photo.display_name || photo.originalname}
               className="w-full h-auto"
               onLoad={() => setPhoto({ ...photo })}

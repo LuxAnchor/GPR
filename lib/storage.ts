@@ -6,7 +6,7 @@ export async function uploadFile(file: Buffer, filename: string): Promise<{ url:
   const key = `photos/${uuidv4()}.${ext}`;
 
   const options: Parameters<typeof put>[2] = {
-    access: 'public',
+    access: 'private',
     token: process.env.BLOB_READ_WRITE_TOKEN,
     storeId: process.env.BLOB_STORE_ID,
   };

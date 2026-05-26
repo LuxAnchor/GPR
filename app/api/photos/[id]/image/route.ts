@@ -32,12 +32,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     
     let canAccess = false;
     
-    // 如果是管理员访问自己的照片，允许访问
     if (userId && photo.user_id === userId) {
       canAccess = true;
     }
     
-    // 如果是公开照片（已锁定），允许访问
     if (photo.islocked === 1) {
       canAccess = true;
     }
@@ -54,7 +52,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     return new NextResponse(blob, {
       headers: {
         'Content-Type': response.headers.get('Content-Type') || 'image/jpeg',
-        'Cache-Control': 'public, max-age=31536000',
+        'Cache-Control': 'public, max-age=3600',
       },
     });
   } catch (error) {

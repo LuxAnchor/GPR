@@ -38,6 +38,7 @@ export default function AnnotatePage() {
   const [saving, setSaving] = useState(false);
   const [faces, setFaces] = useState<Face[]>([]);
   const [selectedFace, setSelectedFace] = useState<string | null>(null);
+  const [imageSrc, setImageSrc] = useState<string>('');
 
   useEffect(() => {
     loadPhoto();
@@ -55,17 +56,28 @@ export default function AnnotatePage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/photos/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      
+      const [photoResponse, imageResponse] = await Promise.all([
+        fetch(`/api/photos/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/photos/${id}/image`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ]);
 
-      if (!response.ok) {
+      if (!photoResponse.ok) {
         throw new Error('Failed to load photo');
       }
 
-      const data = await response.json();
+      const data = await photoResponse.json();
       setPhoto(data);
       setFaces(data.faces);
+
+      if (imageResponse.ok) {
+        const blob = await imageResponse.blob();
+        setImageSrc(URL.createObjectURL(blob));
+      }
     } catch (err: any) {
       setError(err.message || '加载失败');
     } finally {
@@ -289,7 +301,7 @@ export default function AnnotatePage() {
               >
                 <img
                   ref={imageRef}
-                  src={photo.filepath}
+                  src={imageSrc || photo.filepath}
                   alt={photo.display_name || photo.originalname}
                   className="w-full h-auto"
                   draggable={false}
