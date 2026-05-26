@@ -104,7 +104,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
     
     function getFaceThumbnail(face) {
       const img = document.getElementById('photo');
-      if (!img.naturalWidth) return null;
+      if (!img.complete || !img.naturalWidth) return null;
       
       const scaleX = img.naturalWidth / img.offsetWidth;
       const scaleY = img.naturalHeight / img.offsetHeight;
@@ -114,13 +114,23 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       const width = Math.round(face.width / scaleX);
       const height = Math.round(face.height / scaleY);
       
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+      if (width <= 0 || height <= 0) return null;
       
-      return canvas.toDataURL('image/jpeg', 0.8);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.min(width, 150);
+      canvas.height = Math.min(height, 150);
+      const ctx = canvas.getContext('2d');
+      
+      const srcX = Math.max(0, x);
+      const srcY = Math.max(0, y);
+      const srcW = Math.min(width, img.naturalWidth - srcX);
+      const srcH = Math.min(height, img.naturalHeight - srcY);
+      
+      if (srcW <= 0 || srcH <= 0) return null;
+      
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
+      
+      return canvas.toDataURL('image/jpeg', 0.85);
     }
     
     function showFacePopup(faceId, event) {
@@ -132,10 +142,11 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       if (!face) return;
       
       const thumbnail = getFaceThumbnail(face);
+      const fallbackImg = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" style="background:#f3f4f6"><text x="50%" y="50%" text-anchor="middle" dy=".35em" fill="%239ca3af" font-family="system-ui" font-size="14">No photo</text></svg>');
       
       const popup = document.createElement('div');
       popup.className = 'face-popup';
-      popup.innerHTML = '<img src="' + (thumbnail || 'data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\"><rect fill=\"%23ddd\" width=\"100\" height=\"100\"/></svg>') + '" alt="Face"/><div class="name">' + (face.name || 'No name') + '</div>';
+      popup.innerHTML = '<img src="' + (thumbnail || fallbackImg) + '" alt="Face" onerror="this.src=\'' + fallbackImg + '\'"/><div class="name">' + (face.name || 'No name') + '</div>';
       
       document.body.appendChild(popup);
       
