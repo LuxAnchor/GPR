@@ -366,7 +366,7 @@ export default function AnnotateLinkPage() {
               >
                 <img
                   ref={imageRef}
-                  src={photo.filepath}
+                  src={`/api/photos/public/image?annotate_code=${photo.annotate_code}`}
                   alt={photo.display_name || photo.originalname}
                   className="w-full h-auto"
                   draggable={false}
