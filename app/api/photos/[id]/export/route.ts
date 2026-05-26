@@ -196,11 +196,15 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const params = await context.params;
+  console.log('Export API called for photo:', params.id);
+  
   try {
     const userId = getUserId(request);
     if (!userId) {
+      console.log('Unauthorized - no userId');
       return NextResponse.json({ error: '未授权' }, { status: 401 });
     }
+    console.log('User authenticated:', userId);
 
     const photos = await sql`
       SELECT * FROM photos WHERE id = ${params.id}
@@ -208,20 +212,25 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const photo = photos[0];
 
     if (!photo) {
+      console.log('Photo not found');
       return NextResponse.json({ error: '照片不存在' }, { status: 404 });
     }
+    console.log('Photo found:', photo.display_name || photo.originalname);
 
     if (photo.user_id !== userId) {
+      console.log('Access denied - user mismatch');
       return NextResponse.json({ error: '无权访问此照片' }, { status: 403 });
     }
 
     if (photo.islocked !== 1) {
+      console.log('Photo not locked');
       return NextResponse.json({ error: '请先锁定照片再导出' }, { status: 400 });
     }
 
     const faces = await sql`
       SELECT * FROM faces WHERE photo_id = ${params.id}
     `;
+    console.log('Faces found:', faces.length);
 
     const zip = new JSZip();
 
@@ -232,9 +241,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     try {
       const photoUrl = photo.filepath;
+      console.log('Fetching photo from:', photoUrl);
       const response = await fetch(photoUrl);
       if (response.ok) {
         const photoBuffer = await response.arrayBuffer();
+        console.log('Photo fetched successfully, size:', photoBuffer.byteLength);
         zip.file('photo.jpg', photoBuffer);
       } else {
         console.error('Failed to fetch photo:', response.status, response.statusText);
@@ -245,7 +256,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     zip.file('说明.txt', `毕业照查看器\n\n使用说明：\n1. 解压zip文件\n2. 双击打开index.html\n3. 点击头像或名单查看对应人员\n4. 点击右上角"切换名单模式"查看完整名单\n\n照片: ${photo.display_name || photo.originalname}\n已标注人数: ${faces.length} 人\n生成时间：${new Date().toLocaleString()}`);
 
+    console.log('Generating zip file...');
     const zipBuffer = await zip.generateAsync({ type: 'uint8array' });
+    console.log('Zip generated, size:', zipBuffer.length);
 
     return new NextResponse(zipBuffer, {
       status: 200,
