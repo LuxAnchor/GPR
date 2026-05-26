@@ -172,7 +172,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           clickArea.style.width = scaledWidth + 'px';
           clickArea.style.height = scaledHeight + 'px';
           clickArea.style.cursor = 'pointer';
-          clickArea.onclick = () => highlightFace(face.id, true);
+          clickArea.onclick = () => clearHighlights();
           container.appendChild(clickArea);
         });
         
