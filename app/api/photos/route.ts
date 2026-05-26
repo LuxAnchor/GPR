@@ -67,7 +67,10 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    console.log('[Upload] Uploading file:', file.name, 'size:', buffer.length);
+    
     const { url, pathname } = await uploadFile(buffer, file.name);
+    console.log('[Upload] File uploaded, url:', url, 'pathname:', pathname);
 
     const id = generateUUID();
     const code = generateSecureCode();
