@@ -27,7 +27,6 @@ interface Photo {
   annotate_view_code: string | null;
   user_id: string;
   faces: Face[];
-  imageSrc?: string;
 }
 
 export default function AdminPage() {
@@ -79,26 +78,7 @@ export default function AdminPage() {
       }
 
       const data = await response.json();
-      
-      const photosWithImages = await Promise.all(
-        data.map(async (photo: Photo) => {
-          try {
-            const imageResponse = await fetch(`/api/photos/${photo.id}/image`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            
-            if (imageResponse.ok) {
-              const blob = await imageResponse.blob();
-              return { ...photo, imageSrc: URL.createObjectURL(blob) };
-            }
-          } catch (err) {
-            console.error('Failed to load image:', err);
-          }
-          return photo;
-        })
-      );
-      
-      setPhotos(photosWithImages);
+      setPhotos(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -116,16 +96,14 @@ export default function AdminPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert('文件大小不能超过10MB');
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
       return;
     }
 
-    const token = localStorage.getItem('auth_token');
-    if (!token) return;
-
-    setUploading(true);
     try {
+      setUploading(true);
       const formData = new FormData();
       formData.append('photo', file);
 
@@ -136,122 +114,73 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Upload failed');
+        const data = await response.json();
+        throw new Error(data.error || 'Upload failed');
       }
 
-      await loadPhotos(token);
-      alert('上传成功！');
+      const { id } = await response.json();
+      router.push(`/admin/photo/${id}/annotate`);
     } catch (err: any) {
-      alert(err.message);
+      setError(err.message);
     } finally {
       setUploading(false);
-      e.target.value = '';
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这张照片吗？')) return;
-
+  const handleLock = async (photoId: string) => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/photos/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error('Delete failed');
-      }
-
-      await loadPhotos(token);
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const handleLock = async (id: string) => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) return;
-
-    try {
-      const response = await fetch(`/api/photos/${id}`, {
+      const response = await fetch(`/api/photos/${photoId}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action: 'lock' }),
+        body: JSON.stringify({ islocked: 1 }),
       });
 
       if (!response.ok) {
-        throw new Error('Lock failed');
+        throw new Error('Failed to lock photo');
       }
 
-      await loadPhotos(token);
-      alert('照片已锁定，可以分享链接了！');
+      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, islocked: 1 } : p));
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  const handleUnlock = async (id: string) => {
+  const handleUnlock = async (photoId: string) => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/photos/${id}`, {
+      const response = await fetch(`/api/photos/${photoId}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action: 'unlock' }),
+        body: JSON.stringify({ islocked: 0 }),
       });
 
       if (!response.ok) {
-        throw new Error('Unlock failed');
+        throw new Error('Failed to unlock photo');
       }
 
-      await loadPhotos(token);
-      alert('照片已解锁，可以继续编辑！');
+      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, islocked: 0 } : p));
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  const handleUpdateDisplayName = async (id: string, displayName: string) => {
+  const handleSetViewCode = async (photoId: string, viewCode: string | null) => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/photos/${id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ display_name: displayName }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Update failed');
-      }
-
-      await loadPhotos(token);
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const handleSetViewCode = async (id: string, viewCode: string | null) => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) return;
-
-    try {
-      const response = await fetch(`/api/photos/${id}`, {
+      const response = await fetch(`/api/photos/${photoId}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -261,22 +190,21 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Update failed');
+        throw new Error('Failed to update photo');
       }
 
-      await loadPhotos(token);
-      alert(viewCode ? '查看密码设置成功' : '查看密码已移除');
+      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, view_code: viewCode } : p));
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  const handleSetAnnotateViewCode = async (id: string, annotateViewCode: string | null) => {
+  const handleSetAnnotateCode = async (photoId: string, annotateViewCode: string | null) => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/photos/${id}`, {
+      const response = await fetch(`/api/photos/${photoId}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -286,61 +214,301 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Update failed');
+        throw new Error('Failed to update photo');
       }
 
-      await loadPhotos(token);
-      alert(annotateViewCode ? '标注密码设置成功' : '标注密码已移除');
+      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, annotate_view_code: annotateViewCode } : p));
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  const handleExport = async (photo: Photo) => {
+  const handleDelete = async (photoId: string) => {
+    if (!confirm('确定要删除这张照片吗？')) return;
+
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/photos/${photo.id}/export`, {
+      const response = await fetch(`/api/photos/${photoId}`, {
+        method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Export failed');
+        throw new Error('Failed to delete photo');
+      }
+
+      setPhotos(prev => prev.filter(p => p.id !== photoId));
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const copyToClipboard = (text: string, message: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert(message);
+    }).catch(() => {
+      alert('复制失败');
+    });
+  };
+
+  const handleExport = async (photoId: string) => {
+    try {
+      const response = await fetch(`/api/photos/${photoId}/export`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to export photo');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${photo.display_name || photo.originalname}.zip`;
+      a.download = 'photo-export.zip';
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  const copyLink = (code: string) => {
-    const url = `${window.location.origin}/photo/${code}`;
-    navigator.clipboard.writeText(url);
-    alert('链接已复制到剪贴板');
-  };
+  const PhotoCard = ({ photo }: { photo: Photo }) => {
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [newName, setNewName] = useState(photo.display_name || '');
+    const [isSettingViewCode, setIsSettingViewCode] = useState(false);
+    const [viewCode, setViewCode] = useState('');
+    const [isSettingAnnotateCode, setIsSettingAnnotateCode] = useState(false);
+    const [annotateViewCode, setAnnotateViewCode] = useState('');
 
-  const copyAnnotateLink = (annotateCode: string) => {
-    const url = `${window.location.origin}/annotate/${annotateCode}`;
-    navigator.clipboard.writeText(url);
-    alert('标注链接已复制到剪贴板');
+    const handleSaveName = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`/api/photos/${photo.id}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ display_name: newName || null }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update photo');
+        }
+
+        setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, display_name: newName || null } : p));
+        setIsEditingName(false);
+      } catch (err: any) {
+        alert(err.message);
+      }
+    };
+
+    const handleSaveViewCode = () => {
+      handleSetViewCode(photo.id, viewCode || null);
+      setIsSettingViewCode(false);
+    };
+
+    const handleSaveAnnotateCode = () => {
+      handleSetAnnotateCode(photo.id, annotateViewCode || null);
+      setIsSettingAnnotateCode(false);
+    };
+
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+        <div className="relative h-48">
+          <img
+            src={photo.filepath}
+            alt={photo.display_name || photo.originalname}
+            className="w-full h-full object-cover"
+          />
+          {photo.islocked === 1 ? (
+            <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-sm flex items-center">
+              <Lock className="h-4 w-4 mr-1" />
+              已锁定
+            </div>
+          ) : (
+            <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm flex items-center">
+              <Unlock className="h-4 w-4 mr-1" />
+              未锁定
+            </div>
+          )}
+          {(photo.view_code || photo.annotate_view_code) && (
+            <div className="absolute top-2 left-2 bg-purple-500 text-white px-2 py-1 rounded text-sm flex items-center">
+              <Key className="h-4 w-4 mr-1" />
+              已设密码
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          {isEditingName ? (
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="照片名称"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded"
+              />
+              <button
+                onClick={handleSaveName}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+              >
+                <Save className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-900 truncate">
+                {photo.display_name || photo.originalname}
+              </h3>
+              <button
+                onClick={() => setIsEditingName(true)}
+                className="p-1 text-gray-500 hover:text-blue-600"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="text-sm text-gray-600 mb-3">
+            已标注: {photo.faces.length} 人
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {photo.islocked === 0 ? (
+              <button
+                onClick={() => handleLock(photo.id)}
+                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center justify-center"
+              >
+                <Lock className="h-4 w-4 mr-1" />
+                锁定
+              </button>
+            ) : (
+              <button
+                onClick={() => handleUnlock(photo.id)}
+                className="flex-1 px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 flex items-center justify-center"
+              >
+                <Unlock className="h-4 w-4 mr-1" />
+                解锁
+              </button>
+            )}
+
+            <Link
+              href={`/admin/photo/${photo.id}/annotate`}
+              className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center justify-center"
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              标注
+            </Link>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              onClick={() => copyToClipboard(`${window.location.origin}/photo/${photo.code}`, '查看链接已复制!')}
+              className="flex-1 px-3 py-2 bg-teal-600 text-white text-sm rounded hover:bg-teal-700 flex items-center justify-center"
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              复制查看链接
+            </button>
+            
+            <button
+              onClick={() => copyToClipboard(`${window.location.origin}/annotate/${photo.annotate_code}`, '标注链接已复制!')}
+              className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 flex items-center justify-center"
+            >
+              <UserPlus className="h-4 w-4 mr-1" />
+              复制标注链接
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-3">
+            {isSettingViewCode ? (
+              <div className="flex-1 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={viewCode}
+                  onChange={(e) => setViewCode(e.target.value)}
+                  placeholder="查看密码"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                />
+                <button
+                  onClick={handleSaveViewCode}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                >
+                  <Save className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsSettingViewCode(true)}
+                className="flex-1 px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 flex items-center justify-center"
+              >
+                {photo.view_code ? <EyeOff className="h-4 w-4 mr-1" /> : <Key className="h-4 w-4 mr-1" />}
+                {photo.view_code ? '修改查看密码' : '设置查看密码'}
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-3">
+            {isSettingAnnotateCode ? (
+              <div className="flex-1 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={annotateViewCode}
+                  onChange={(e) => setAnnotateViewCode(e.target.value)}
+                  placeholder="标注密码"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                />
+                <button
+                  onClick={handleSaveAnnotateCode}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                >
+                  <Save className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsSettingAnnotateCode(true)}
+                className="flex-1 px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 flex items-center justify-center"
+              >
+                {photo.annotate_view_code ? <EyeOff className="h-4 w-4 mr-1" /> : <Key className="h-4 w-4 mr-1" />}
+                {photo.annotate_view_code ? '修改标注密码' : '设置标注密码'}
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-3">
+            {photo.islocked === 1 && (
+              <button
+                onClick={() => handleExport(photo.id)}
+                className="flex-1 px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 flex items-center justify-center"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                导出
+              </button>
+            )}
+            <button
+              onClick={() => handleDelete(photo.id)}
+              className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex items-center justify-center"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              删除
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-600">加载中...</p>
         </div>
       </div>
@@ -348,340 +516,67 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Camera className="h-8 w-8 text-blue-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">🎓 毕业合照管理</h1>
-              <p className="text-sm text-gray-600">欢迎，{user?.username}</p>
+              <h1 className="text-xl font-bold text-gray-900">毕业合照管理</h1>
+              <p className="text-sm text-gray-600">欢迎, {user?.username}</p>
             </div>
-            <div className="flex items-center gap-4">
-              <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleUpload}
-                  disabled={uploading}
-                  className="hidden"
-                />
-                <span className="flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  {uploading ? '上传中...' : '上传照片'}
-                </span>
-              </label>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <LogOut className="w-4 h-4" />
-                  退出
-                </span>
-              </button>
-            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+              {uploading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {uploading ? '上传中...' : '上传照片'}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900"
+            >
+              <LogOut className="h-4 w-4" />
+              退出
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center">
-            <AlertCircle className="h-5 w-5 mr-3" />
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2" />
             {error}
           </div>
-        )}
+        </div>
+      )}
 
-        {photos.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-lg shadow">
-            <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">还没有照片</h3>
-            <p className="text-gray-500 mb-6">点击上方"上传照片"按钮开始管理您的毕业合照</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {photos.map((photo) => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                onDelete={handleDelete}
-                onLock={handleLock}
-                onUnlock={handleUnlock}
-                onUpdateDisplayName={handleUpdateDisplayName}
-                onSetViewCode={handleSetViewCode}
-                onSetAnnotateViewCode={handleSetAnnotateViewCode}
-                onExport={handleExport}
-                onCopyLink={copyLink}
-                onCopyAnnotateLink={copyAnnotateLink}
-              />
-            ))}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {photos.map((photo) => (
+            <PhotoCard key={photo.id} photo={photo} />
+          ))}
+        </div>
+
+        {photos.length === 0 && (
+          <div className="text-center py-16">
+            <Camera className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">还没有上传照片</p>
+            <p className="text-gray-500 mt-2">点击右上角 "上传照片" 开始</p>
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-function PhotoCard({
-  photo,
-  onDelete,
-  onLock,
-  onUnlock,
-  onUpdateDisplayName,
-  onSetViewCode,
-  onSetAnnotateViewCode,
-  onExport,
-  onCopyLink,
-  onCopyAnnotateLink,
-}: {
-  photo: Photo;
-  onDelete: (id: string) => void;
-  onLock: (id: string) => void;
-  onUnlock: (id: string) => void;
-  onUpdateDisplayName: (id: string, displayName: string) => void;
-  onSetViewCode: (id: string, viewCode: string | null) => void;
-  onSetAnnotateViewCode: (id: string, annotateViewCode: string | null) => void;
-  onExport: (photo: Photo) => void;
-  onCopyLink: (code: string) => void;
-  onCopyAnnotateLink: (annotateCode: string) => void;
-}) {
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [displayName, setDisplayName] = useState(photo.display_name || '');
-  const [isSettingViewCode, setIsSettingViewCode] = useState(false);
-  const [viewCode, setViewCode] = useState(photo.view_code || '');
-  const [isSettingAnnotateCode, setIsSettingAnnotateCode] = useState(false);
-  const [annotateViewCode, setAnnotateViewCode] = useState(photo.annotate_view_code || '');
-
-  const handleSaveName = () => {
-    onUpdateDisplayName(photo.id, displayName);
-    setIsEditingName(false);
-  };
-
-  const handleSaveViewCode = () => {
-    onSetViewCode(photo.id, viewCode || null);
-    setIsSettingViewCode(false);
-  };
-
-  const handleSaveAnnotateCode = () => {
-    onSetAnnotateViewCode(photo.id, annotateViewCode || null);
-    setIsSettingAnnotateCode(false);
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="relative h-48">
-        <img
-          src={photo.imageSrc || photo.filepath}
-          alt={photo.display_name || photo.originalname}
-          className="w-full h-full object-cover"
-        />
-        {photo.islocked === 1 ? (
-          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-sm flex items-center">
-            <Lock className="h-4 w-4 mr-1" />
-            已锁定
-          </div>
-        ) : (
-          <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm flex items-center">
-            <Unlock className="h-4 w-4 mr-1" />
-            未锁定
-          </div>
-        )}
-        {(photo.view_code || photo.annotate_view_code) && (
-          <div className="absolute top-2 left-2 bg-purple-500 text-white px-2 py-1 rounded text-sm flex items-center">
-            <Key className="h-4 w-4 mr-1" />
-            已设密码
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        {isEditingName ? (
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="输入照片名称"
-              className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-            />
-            <button
-              onClick={handleSaveName}
-              className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-            >
-              <Save className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setIsEditingName(false)}
-              className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
-            >
-              取消
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-900 truncate flex-1">
-              {photo.display_name || photo.originalname}
-            </h3>
-            <button
-              onClick={() => setIsEditingName(true)}
-              className="ml-2 p-1 text-blue-500 hover:text-blue-700"
-              title="编辑名称"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-        {photo.display_name && (
-          <p className="text-xs text-gray-400 mb-1">
-            原文件名: {photo.originalname}
-          </p>
-        )}
-        <p className="text-sm text-gray-500 mb-3">
-          已标注: {photo.faces.length} 人
-        </p>
-
-        <div className="space-y-2 mb-3">
-          {isSettingViewCode ? (
-            <div className="p-2 bg-gray-50 rounded">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={viewCode}
-                  onChange={(e) => setViewCode(e.target.value)}
-                  placeholder="设置查看密码（留空移除）"
-                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                />
-                <button
-                  onClick={handleSaveViewCode}
-                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                >
-                  保存
-                </button>
-                <button
-                  onClick={() => setIsSettingViewCode(false)}
-                  className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsSettingViewCode(true)}
-              className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1"
-            >
-              <Key className="h-3 w-3" />
-              {photo.view_code ? '查看密码：已设置' : '设置查看密码'}
-            </button>
-          )}
-
-          {isSettingAnnotateCode ? (
-            <div className="p-2 bg-gray-50 rounded">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={annotateViewCode}
-                  onChange={(e) => setAnnotateViewCode(e.target.value)}
-                  placeholder="设置标注密码（留空移除）"
-                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                />
-                <button
-                  onClick={handleSaveAnnotateCode}
-                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                >
-                  保存
-                </button>
-                <button
-                  onClick={() => setIsSettingAnnotateCode(false)}
-                  className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsSettingAnnotateCode(true)}
-              className="text-xs text-teal-600 hover:text-teal-800 flex items-center gap-1"
-            >
-              <EyeOff className="h-3 w-3" />
-              {photo.annotate_view_code ? '标注密码：已设置' : '设置标注密码'}
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Link
-            href={`/admin/photo/${photo.id}/annotate`}
-            className="w-full flex items-center justify-center px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm"
-          >
-            <Edit className="h-4 w-4 mr-1" />
-            标注
-          </Link>
-          {photo.islocked === 1 ? (
-            <button
-              onClick={() => onUnlock(photo.id)}
-              className="w-full flex items-center justify-center px-3 py-2 bg-yellow-50 text-yellow-600 rounded hover:bg-yellow-100 text-sm"
-            >
-              <Unlock className="h-4 w-4 mr-1" />
-              解锁
-            </button>
-          ) : (
-            <button
-              onClick={() => onLock(photo.id)}
-              className="w-full flex items-center justify-center px-3 py-2 bg-green-50 text-green-600 rounded hover:bg-green-100 text-sm"
-            >
-              <Lock className="h-4 w-4 mr-1" />
-              锁定
-            </button>
-          )}
-          {photo.islocked === 1 && (
-            <>
-              <button
-                onClick={() => onCopyLink(photo.code)}
-                className="w-full flex items-center justify-center px-3 py-2 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 text-sm"
-              >
-                <Copy className="h-4 w-4 mr-1" />
-                复制查看链接
-              </button>
-              <a
-                href={`/photo/${photo.code}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center px-3 py-2 bg-orange-50 text-orange-600 rounded hover:bg-orange-100 text-sm"
-              >
-                <ExternalLink className="h-4 w-4 mr-1" />
-                查看
-              </a>
-              <button
-                onClick={() => onExport(photo)}
-                className="w-full flex items-center justify-center px-3 py-2 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100 text-sm"
-              >
-                <Download className="h-4 w-4 mr-1" />
-                导出
-              </button>
-            </>
-          )}
-          {photo.annotate_code && (
-            <button
-              onClick={() => onCopyAnnotateLink(photo.annotate_code)}
-              className="w-full flex items-center justify-center px-3 py-2 bg-teal-50 text-teal-600 rounded hover:bg-teal-100 text-sm"
-            >
-              <UserPlus className="h-4 w-4 mr-1" />
-              复制标注链接
-            </button>
-          )}
-          <button
-            onClick={() => onDelete(photo.id)}
-            className="w-full flex items-center justify-center px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm"
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            删除
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
