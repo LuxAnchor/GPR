@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Camera, LogOut, Upload, Lock, Unlock, Eye, Edit, Trash2, Download, AlertCircle, Copy, ExternalLink, UserPlus, RefreshCw, Save, Key, EyeOff } from 'lucide-react';
+import { Camera, LogOut, Upload, Lock, Unlock, Edit, Trash2, Download, AlertCircle, Copy, UserPlus, Save, Key, EyeOff, RefreshCw } from 'lucide-react';
 
 interface Face {
   id: string;
@@ -35,6 +35,7 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -119,6 +120,7 @@ export default function AdminPage() {
       }
 
       const { id } = await response.json();
+      // Upload successful, navigate to annotate page
       router.push(`/admin/photo/${id}/annotate`);
     } catch (err: any) {
       setError(err.message);
@@ -145,7 +147,9 @@ export default function AdminPage() {
         throw new Error('Failed to lock photo');
       }
 
-      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, islocked: 1 } : p));
+      // Reload photos
+      await loadPhotos(token);
+      alert('照片已锁定，可以分享链接了！');
     } catch (err: any) {
       alert(err.message);
     }
@@ -169,7 +173,8 @@ export default function AdminPage() {
         throw new Error('Failed to unlock photo');
       }
 
-      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, islocked: 0 } : p));
+      await loadPhotos(token);
+      alert('照片已解锁，可以继续编辑！');
     } catch (err: any) {
       alert(err.message);
     }
@@ -193,7 +198,7 @@ export default function AdminPage() {
         throw new Error('Failed to update photo');
       }
 
-      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, view_code: viewCode } : p));
+      await loadPhotos(token);
     } catch (err: any) {
       alert(err.message);
     }
@@ -217,7 +222,7 @@ export default function AdminPage() {
         throw new Error('Failed to update photo');
       }
 
-      setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, annotate_view_code: annotateViewCode } : p));
+      await loadPhotos(token);
     } catch (err: any) {
       alert(err.message);
     }
@@ -230,6 +235,7 @@ export default function AdminPage() {
     if (!token) return;
 
     try {
+      setDeleting(photoId);
       const response = await fetch(`/api/photos/${photoId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -239,9 +245,11 @@ export default function AdminPage() {
         throw new Error('Failed to delete photo');
       }
 
-      setPhotos(prev => prev.filter(p => p.id !== photoId));
+      await loadPhotos(token);
     } catch (err: any) {
       alert(err.message);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -282,12 +290,14 @@ export default function AdminPage() {
     const [viewCode, setViewCode] = useState('');
     const [isSettingAnnotateCode, setIsSettingAnnotateCode] = useState(false);
     const [annotateViewCode, setAnnotateViewCode] = useState('');
+    const [updatingName, setUpdatingName] = useState(false);
 
     const handleSaveName = async () => {
       const token = localStorage.getItem('auth_token');
       if (!token) return;
 
       try {
+        setUpdatingName(true);
         const response = await fetch(`/api/photos/${photo.id}`, {
           method: 'PUT',
           headers: {
@@ -301,10 +311,12 @@ export default function AdminPage() {
           throw new Error('Failed to update photo');
         }
 
-        setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, display_name: newName || null } : p));
+        await loadPhotos(token);
         setIsEditingName(false);
       } catch (err: any) {
         alert(err.message);
+      } finally {
+        setUpdatingName(false);
       }
     };
 
@@ -327,20 +339,20 @@ export default function AdminPage() {
             className="w-full h-full object-cover"
           />
           {photo.islocked === 1 ? (
-            <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-sm flex items-center">
-              <Lock className="h-4 w-4 mr-1" />
-              已锁定
+            <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs sm:text-sm flex items-center">
+              <Lock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">已锁定</span>
             </div>
           ) : (
-            <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm flex items-center">
-              <Unlock className="h-4 w-4 mr-1" />
-              未锁定
+            <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs sm:text-sm flex items-center">
+              <Unlock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">未锁定</span>
             </div>
           )}
           {(photo.view_code || photo.annotate_view_code) && (
-            <div className="absolute top-2 left-2 bg-purple-500 text-white px-2 py-1 rounded text-sm flex items-center">
-              <Key className="h-4 w-4 mr-1" />
-              已设密码
+            <div className="absolute top-2 left-2 bg-purple-500 text-white px-2 py-1 rounded text-xs sm:text-sm flex items-center">
+              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">已设密码</span>
             </div>
           )}
         </div>
@@ -352,13 +364,18 @@ export default function AdminPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="照片名称"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
               />
               <button
                 onClick={handleSaveName}
+                disabled={updatingName}
                 className="p-2 text-blue-600 hover:bg-blue-50 rounded"
               >
-                <Save className="h-4 w-4" />
+                {updatingName ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
               </button>
             </div>
           ) : (
@@ -383,24 +400,26 @@ export default function AdminPage() {
             {photo.islocked === 0 ? (
               <button
                 onClick={() => handleLock(photo.id)}
-                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center justify-center"
+                className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center justify-center touch-manipulation"
               >
                 <Lock className="h-4 w-4 mr-1" />
-                锁定
+                <span className="hidden sm:inline">锁定</span>
+                <span className="sm:hidden">锁</span>
               </button>
             ) : (
               <button
                 onClick={() => handleUnlock(photo.id)}
-                className="flex-1 px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 flex items-center justify-center"
+                className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 flex items-center justify-center touch-manipulation"
               >
                 <Unlock className="h-4 w-4 mr-1" />
-                解锁
+                <span className="hidden sm:inline">解锁</span>
+                <span className="sm:hidden">解</span>
               </button>
             )}
 
             <Link
               href={`/admin/photo/${photo.id}/annotate`}
-              className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center justify-center"
+              className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center justify-center touch-manipulation"
             >
               <Edit className="h-4 w-4 mr-1" />
               标注
@@ -410,18 +429,20 @@ export default function AdminPage() {
           <div className="flex flex-wrap gap-2 mt-3">
             <button
               onClick={() => copyToClipboard(`${window.location.origin}/photo/${photo.code}`, '查看链接已复制!')}
-              className="flex-1 px-3 py-2 bg-teal-600 text-white text-sm rounded hover:bg-teal-700 flex items-center justify-center"
+              className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-teal-600 text-white text-sm rounded hover:bg-teal-700 flex items-center justify-center touch-manipulation"
             >
               <Copy className="h-4 w-4 mr-1" />
-              复制查看链接
+              <span className="hidden sm:inline">复制查看链接</span>
+              <span className="sm:hidden">复制查看</span>
             </button>
             
             <button
               onClick={() => copyToClipboard(`${window.location.origin}/annotate/${photo.annotate_code}`, '标注链接已复制!')}
-              className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 flex items-center justify-center"
+              className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 flex items-center justify-center touch-manipulation"
             >
               <UserPlus className="h-4 w-4 mr-1" />
-              复制标注链接
+              <span className="hidden sm:inline">复制标注链接</span>
+              <span className="sm:hidden">复制标注</span>
             </button>
           </div>
 
@@ -485,18 +506,25 @@ export default function AdminPage() {
             {photo.islocked === 1 && (
               <button
                 onClick={() => handleExport(photo.id)}
-                className="flex-1 px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 flex items-center justify-center"
+                className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 flex items-center justify-center touch-manipulation"
               >
                 <Download className="h-4 w-4 mr-1" />
-                导出
+                <span className="hidden sm:inline">导出</span>
+                <span className="sm:hidden">导出</span>
               </button>
             )}
             <button
               onClick={() => handleDelete(photo.id)}
-              className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex items-center justify-center"
+              disabled={deleting === photo.id}
+              className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 flex items-center justify-center disabled:opacity-50 touch-manipulation"
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              删除
+              {deleting === photo.id ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1"></div>
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1" />
+              )}
+              <span className="hidden sm:inline">删除</span>
+              <span className="sm:hidden">删除</span>
             </button>
           </div>
         </div>
@@ -527,27 +555,35 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
-              {uploading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-              ) : (
-                <Upload className="h-4 w-4" />
+            <div className="relative">
+              <label className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                ) : (
+                  <Upload className="h-5 w-5" />
+                )}
+                <span className="hidden sm:inline">{uploading ? '上传中...' : '上传照片'}</span>
+                <span className="sm:hidden">{uploading ? '上传中' : '上传'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+              {uploading && (
+                <div className="absolute -bottom-6 left-0 right-0 text-xs text-gray-500 text-center">
+                  上传中，请稍候...
+                </div>
               )}
-              {uploading ? '上传中...' : '上传照片'}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleUpload}
-                disabled={uploading}
-                className="hidden"
-              />
-            </label>
+            </div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900"
             >
-              <LogOut className="h-4 w-4" />
-              退出
+              <LogOut className="h-5 w-5" />
+              <span className="hidden sm:inline">退出</span>
             </button>
           </div>
         </div>
@@ -570,10 +606,10 @@ export default function AdminPage() {
         </div>
 
         {photos.length === 0 && (
-          <div className="text-center py-16">
+          <div className="text-center py-16 bg-white rounded-lg shadow">
             <Camera className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">还没有上传照片</p>
-            <p className="text-gray-500 mt-2">点击右上角 "上传照片" 开始</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">暂无照片</h3>
+            <p className="text-gray-500">上传第一张毕业合照开始管理</p>
           </div>
         )}
       </main>

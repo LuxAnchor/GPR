@@ -91,16 +91,24 @@ export default function AnnotateLinkPage() {
       setError(null);
       const response = await fetch(`/api/photos/annotate?annotate_code=${code}`);
       
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        if (!response.ok) {
+          throw new Error('服务器响应无效');
+        }
+      }
+      
       if (!response.ok) {
-        const data = await response.json();
-        if (data.error && (data.error.includes('需要验证') || data.error.includes('需要验证码'))) {
+        const errorMsg = data?.error || '加载失败';
+        if (errorMsg.includes('需要验证') || errorMsg.includes('需要验证码')) {
           setNeedsVerification(true);
           return;
         }
-        throw new Error(data.error || '加载失败');
+        throw new Error(errorMsg);
       }
       
-      const data = await response.json();
       setPhoto(data);
       setFaces(data.faces.map((f: Face) => ({
         id: f.id,
@@ -126,8 +134,28 @@ export default function AnnotateLinkPage() {
     loadPhoto();
   }, [code]);
 
+  const getFaceThumbnail = (face: Face): string | null => {
+    if (!imageRef.current || !photo) return null;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    
+    const size = 80;
+    canvas.width = size;
+    canvas.height = size;
+    
+    ctx.drawImage(
+      imageRef.current,
+      face.x, face.y, face.width, face.height,
+      0, 0, size, size
+    );
+    
+    return canvas.toDataURL('image/png');
+  };
+
   const handlePhotoClick = (e: React.MouseEvent) => {
-    if (!imageRef.current || !containerRef.current) return;
+    if (!imageRef.current) return;
     
     const rect = imageRef.current.getBoundingClientRect();
     const scaleX = imageRef.current.naturalWidth / rect.width;
@@ -150,8 +178,6 @@ export default function AnnotateLinkPage() {
     setFaces([...faces, newFace]);
     setSelectedFace('new-' + faces.length);
   };
-
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const updateFace = (index: number, updates: Partial<Face>) => {
     setFaces(prev => prev.map((f, i) => i === index ? { ...f, ...updates } : f));
@@ -239,26 +265,6 @@ export default function AnnotateLinkPage() {
     };
   };
 
-  const getFaceThumbnail = (face: Face) => {
-    if (!imageRef.current || !photo) return null;
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    
-    const size = 80;
-    canvas.width = size;
-    canvas.height = size;
-    
-    ctx.drawImage(
-      imageRef.current,
-      face.x, face.y, face.width, face.height,
-      0, 0, size, size
-    );
-    
-    return canvas.toDataURL('image/png');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -270,6 +276,7 @@ export default function AnnotateLinkPage() {
     );
   }
 
+  // 验证界面
   if (needsVerification) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
@@ -324,43 +331,43 @@ export default function AnnotateLinkPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center">
-            <CheckCircle2 className="h-8 w-8 text-blue-600 mr-3" />
+            <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3" />
             <div>
-              <h1 className="text-xl font-bold text-gray-900">毕业合照标注</h1>
-              <p className="text-sm text-gray-500">{photo.display_name || photo.originalname}</p>
+              <h1 className="text-base sm:text-xl font-bold text-gray-900">毕业合照标注</h1>
+              <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">{photo.display_name || photo.originalname}</p>
             </div>
           </div>
           <button
             onClick={saveFaces}
             disabled={saving || faces.length === 0}
-            className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+            className="flex items-center px-3 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 touch-manipulation"
           >
-            <Save className="h-5 w-5 mr-2" />
-            {saving ? '保存中...' : '保存标注'}
+            <Save className="h-5 w-5 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">{saving ? '保存中...' : '保存标注'}</span>
+            <span className="sm:hidden">{saving ? '保存中' : '保存'}</span>
           </button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm">
+      <div className="max-w-7xl mx-auto p-3 sm:p-4">
+        <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-xs sm:text-sm">
           💡 <strong>操作提示：</strong>直接点击照片上的人脸来添加标注，在右侧填写姓名！
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-4">
+            <div className="bg-white rounded-lg shadow-lg p-3 sm:p-4">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">毕业合照</h2>
-                <div className="text-sm text-gray-500">
+                <h2 className="text-base sm:text-lg font-semibold truncate">{photo.display_name || photo.originalname}</h2>
+                <div className="text-xs sm:text-sm text-gray-500 ml-2 flex-shrink-0">
                   已标注: {faces.length} 人
                 </div>
               </div>
               
               <div
-                ref={containerRef}
                 className="relative overflow-hidden bg-gray-100 rounded-lg cursor-crosshair"
                 onClick={handlePhotoClick}
               >
@@ -370,6 +377,7 @@ export default function AnnotateLinkPage() {
                   alt={photo.display_name || photo.originalname}
                   className="w-full h-auto"
                   draggable={false}
+                  crossOrigin="anonymous"
                 />
                 
                 {faces.map((face, index) => {
@@ -398,9 +406,16 @@ export default function AnnotateLinkPage() {
                       }}
                     >
                       {isSelected && (
-                        <div className="absolute -top-8 left-0 bg-blue-600 text-white px-2 py-1 rounded text-xs">
-                          人脸 {index + 1}
-                        </div>
+                        <>
+                          <div className="absolute -top-8 left-0 bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                            人脸 {index + 1}
+                          </div>
+                          {/* 添加调整控制点 */}
+                          <div className="absolute -top-2 -left-2 w-4 h-4 bg-blue-600 rounded-full cursor-nw-resize" />
+                          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-600 rounded-full cursor-ne-resize" />
+                          <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-blue-600 rounded-full cursor-sw-resize" />
+                          <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-600 rounded-full cursor-se-resize" />
+                        </>
                       )}
                     </div>
                   );
@@ -409,9 +424,9 @@ export default function AnnotateLinkPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">
+          <div className="lg:col-span-1 mt-4 lg:mt-0">
+            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold mb-4">
                 标注人脸列表
               </h3>
               
@@ -426,11 +441,12 @@ export default function AnnotateLinkPage() {
                 <div className="space-y-3 max-h-[550px] overflow-y-auto">
                   {faces.map((face, index) => {
                     const thumbnail = getFaceThumbnail(face);
+                    const isSelected = selectedFace === (face.id || `new-${index}`);
                     return (
                     <div
                       key={face.id || `new-${index}`}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedFace === (face.id || `new-${index}`)
+                        isSelected
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200'
                       }`}
@@ -488,7 +504,7 @@ export default function AnnotateLinkPage() {
                 </div>
               ) : (
                 <div className="mt-4 p-4 bg-yellow-50 rounded-lg text-yellow-800 text-sm">
-                  ⚠️ 此照片尚未锁定，管理员将在审核后锁定！
+                  ⚠ 此照片尚未锁定，管理员将在审核后锁定！
                 </div>
               )}
             </div>

@@ -76,7 +76,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ error: '无权访问此照片' }, { status: 403 });
     }
 
-    const { action, display_name, view_code, annotate_view_code } = await request.json();
+    const { action, display_name, view_code, annotate_view_code, islocked } = await request.json();
 
     if (action === 'lock') {
       await sql`
@@ -86,6 +86,11 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     } else if (action === 'unlock') {
       await sql`
         UPDATE photos SET islocked = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ${params.id}
+      `;
+      return NextResponse.json({ success: true });
+    } else if (islocked !== undefined) {
+      await sql`
+        UPDATE photos SET islocked = ${islocked}, updated_at = CURRENT_TIMESTAMP WHERE id = ${params.id}
       `;
       return NextResponse.json({ success: true });
     } else if (display_name !== undefined) {
