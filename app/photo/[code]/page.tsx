@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Camera, AlertCircle, X, Eye, List, ArrowLeft } from 'lucide-react';
+import { Camera, AlertCircle, Eye, List } from 'lucide-react';
 
 interface Face {
   id: string;
@@ -41,6 +41,7 @@ export default function PublicPhotoPage() {
   const [viewCode, setViewCode] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const sortedFaces = useMemo(() => {
     if (!photo) return [];
@@ -145,8 +146,8 @@ export default function PublicPhotoPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+        <div className="text-center p-4">
+          <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-600">加载中...</p>
         </div>
       </div>
@@ -156,15 +157,15 @@ export default function PublicPhotoPage() {
   if (needsVerification) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-w-md w-full">
           <div className="text-center mb-6">
-            <Camera className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">照片访问验证</h2>
-            <p className="text-gray-600">请输入访问密码和您的姓名</p>
+            <Camera className="h-12 w-12 sm:h-16 sm:w-16 text-blue-600 mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">照片访问验证</h2>
+            <p className="text-gray-600 text-sm sm:text-base">请输入访问密码和您的姓名</p>
           </div>
 
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mb-4 sm:mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm sm:text-base">
               {error}
             </div>
           )}
@@ -177,7 +178,7 @@ export default function PublicPhotoPage() {
                 value={viewCode}
                 onChange={(e) => setViewCode(e.target.value)}
                 placeholder="请输入访问密码"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               />
             </div>
             <div>
@@ -187,13 +188,13 @@ export default function PublicPhotoPage() {
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
                 placeholder="请输入您的姓名（需在标注名单中）"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               />
             </div>
             <button
               onClick={handleVerify}
               disabled={isVerifying}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {isVerifying ? '验证中...' : '验证并查看照片'}
             </button>
@@ -206,10 +207,10 @@ export default function PublicPhotoPage() {
   if (error || !photo) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-        <div className="text-center bg-white rounded-lg shadow-xl p-8 max-w-md">
-          <AlertCircle className="h-20 w-20 text-red-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">访问失败</h2>
-          <p className="text-gray-600 mb-6">{error || '照片不存在或链接已失效'}</p>
+        <div className="text-center bg-white rounded-lg shadow-xl p-6 sm:p-8 max-w-md">
+          <AlertCircle className="h-16 w-16 sm:h-20 sm:w-20 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">访问失败</h2>
+          <p className="text-gray-600 mb-6 text-sm sm:text-base">{error || '照片不存在或链接已失效'}</p>
           <div className="flex items-center justify-center text-gray-400">
             <Camera className="h-5 w-5 mr-2" />
             <span className="text-sm">毕业合照应用</span>
@@ -221,38 +222,43 @@ export default function PublicPhotoPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
-      <header className="bg-white shadow-md py-4">
+      <header className="bg-white shadow-md py-3 sm:py-4">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center">
-            <Camera className="h-8 w-8 text-blue-600" />
-            <h1 className="ml-2 text-xl font-bold text-gray-900">毕业合照</h1>
+            <Camera className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+            <h1 className="ml-2 text-lg sm:text-xl font-bold text-gray-900">毕业合照</h1>
           </div>
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowNameList(!showNameList)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base touch-manipulation"
             >
               {showNameList ? <Eye className="h-4 w-4" /> : <List className="h-4 w-4" />}
-              {showNameList ? '隐藏名单' : '显示名单'}
+              <span className="hidden sm:inline">{showNameList ? '隐藏名单' : '显示名单'}</span>
+              <span className="sm:hidden">{showNameList ? '隐藏' : '名单'}</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="relative" onClick={handleImageClick}>
+            {!imageLoaded && (
+              <div className="w-full bg-gray-200 animate-pulse" style={{ paddingBottom: '60%' }}></div>
+            )}
             <img
               ref={imageRef}
               src={photo.filepath}
               alt={photo.display_name || photo.originalname}
-              className="w-full h-auto"
-              onLoad={() => setPhoto({ ...photo })}
+              className={`w-full h-auto ${imageLoaded ? 'block' : 'hidden'}`}
+              onLoad={() => setImageLoaded(true)}
             />
 
             {photo.faces.map((face) => {
+              if (!imageLoaded || !face.name) return null;
               const pos = getFacePosition(face);
-              if (!pos || !face.name) return null;
+              if (!pos) return null;
 
               const isSelected = selectedFaceId === face.id;
 
@@ -303,13 +309,13 @@ export default function PublicPhotoPage() {
             })}
           </div>
 
-          <div className="bg-gradient-to-r from-blue-600 to-orange-500 px-6 py-4">
+          <div className="bg-gradient-to-r from-blue-600 to-orange-500 px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between text-white">
               <div>
-                <p className="font-semibold">{photo.display_name || photo.originalname}</p>
-                <p className="text-sm opacity-80">共标注 {sortedFaces.length} 位同学</p>
+                <p className="font-semibold text-sm sm:text-base">{photo.display_name || photo.originalname}</p>
+                <p className="text-xs sm:text-sm opacity-80">共标注 {sortedFaces.length} 位同学</p>
               </div>
-              <div className="flex items-center text-sm opacity-80">
+              <div className="flex items-center text-xs sm:text-sm opacity-80">
                 <Camera className="h-4 w-4 mr-2" />
                 毕业合照
               </div>
@@ -317,9 +323,9 @@ export default function PublicPhotoPage() {
           </div>
 
           {showNameList && (
-            <div className="bg-gray-50 px-6 py-8">
-              <h3 className="text-lg font-bold text-gray-800 mb-6 text-center">同学名单</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="bg-gray-50 px-4 sm:px-6 py-6 sm:py-8">
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6 text-center">同学名单</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
                 {sortedFaces.map((face) => {
                   const isSelected = selectedFaceId === face.id;
                   return (

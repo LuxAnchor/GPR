@@ -262,18 +262,33 @@ export default function AdminPage() {
   };
 
   const handleExport = async (photoId: string) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/photos/${photoId}/export`);
+      const response = await fetch(`/api/photos/${photoId}/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to export photo');
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || '导出失败');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'photo-export.zip';
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'photo-export.zip';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match) filename = match[1];
+      }
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
