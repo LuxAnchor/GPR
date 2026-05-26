@@ -273,9 +273,8 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      const data = await response.json().catch(() => null);
-      
       if (!response.ok) {
+        const data = await response.json().catch(() => null);
         throw new Error(data?.error || data?.details || `导出失败 (${response.status})`);
       }
 
