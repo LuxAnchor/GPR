@@ -31,150 +31,84 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${photo.display_name || photo.originalname || 'Graduation Photo'}</title>
+  <title>毕业照标注</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; }
-    .face-tag { position: absolute; background: rgba(59, 130, 246, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; transform: translateX(-50%); white-space: nowrap; }
-    .face-tag.highlight { background: rgba(239, 68, 68, 0.95); transform: translateX(-50%) scale(1.1); z-index: 100; }
-    .face-box { position: absolute; border: 3px solid #3b82f6; border-radius: 4px; pointer-events: none; }
-    .face-box.highlight { border-color: #ef4444; border-width: 4px; z-index: 100; }
-    .name-item:hover { background-color: #dbeafe; }
-    .name-item.highlight { background-color: #fef2f2; color: #dc2626; font-weight: 600; }
-    .face-popup {
-      position: fixed;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      padding: 16px;
-      z-index: 1000;
-      text-align: center;
-      min-width: 120px;
-    }
-    .face-popup img {
-      width: 100px;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 4px;
-      margin-bottom: 8px;
-    }
-    .face-popup .name {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1f2937;
-    }
+    .face-tag { position: absolute; background: rgba(59, 130, 246, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; transform: translateX(-50%); white-space: nowrap; transition: all 0.2s; }
+    .face-tag.highlight { background: rgba(239, 68, 68, 0.95); transform: translateX(-50%) scale(1.1); z-index: 100; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5); }
+    .face-box { position: absolute; border: 3px solid #3b82f6; border-radius: 4px; pointer-events: none; transition: all 0.2s; }
+    .face-box.highlight { border-color: #ef4444; border-width: 4px; z-index: 100; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+    .name-item { padding: 8px 12px; background: #f3f4f6; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+    .name-item:hover { background: #dbeafe; transform: translateY(-2px); }
+    .name-item.highlight { background: #fef2f2; color: #dc2626; font-weight: 600; border-color: #ef4444; }
+    .search-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; animation: fadeIn 0.3s, fadeOut 0.3s 1.7s forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
-  <div id="app" class="container mx-auto px-4 py-8">
-    <div class="max-w-6xl mx-auto">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">${photo.display_name || photo.originalname || 'Graduation Photo'}</h1>
-        <button id="toggleMode" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-          Toggle List
-        </button>
+  <div id="app" class="container mx-auto px-4 py-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">毕业照标注</h1>
+        <div class="flex gap-2">
+          <button id="toggleMode" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">名单模式</button>
+          <button id="toggleSearch" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">点名功能</button>
+        </div>
+      </div>
+      
+      <div id="searchPanel" class="hidden mb-4">
+        <div class="bg-white rounded-xl shadow-lg p-4">
+          <input type="text" id="searchInput" placeholder="输入姓名搜索..." class="search-input w-full px-4 py-2 border-2 border-gray-300 rounded-lg transition-all">
+          <div id="searchResults" class="mt-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"></div>
+        </div>
       </div>
       
       <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <div id="photoContainer" class="relative inline-block">
-          <img id="photo" src="photo.jpg" alt="Photo" />
+          <img id="photo" src="photo.jpg" alt="毕业照" style="max-width: 100%; height: auto;" />
         </div>
       </div>
       
       <div id="nameList" class="mt-6 hidden">
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-semibold text-gray-800 mb-4">Name List</h2>
-          <div id="nameGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+        <div class="bg-white rounded-xl shadow-lg p-4">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">名单 (共 <span id="faceCount">0</span> 人)</h2>
+            <button id="showAll" class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">显示全部</button>
+          </div>
+          <div id="nameGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2"></div>
         </div>
       </div>
     </div>
   </div>
   
+  <div id="toast" class="toast" style="display: none;"></div>
+
   <script>
     const faces = ${facesData};
     let showNameList = false;
+    let showSearch = false;
     let highlightedFaceId = null;
-    let currentPopup = null;
+    
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
     
     function init() {
+      document.getElementById('faceCount').textContent = faces.length;
       renderFaces();
       renderNameList();
       setupEventListeners();
     }
     
-    function getFaceThumbnail(face) {
-      const img = document.getElementById('photo');
-      if (!img.complete || !img.naturalWidth) return null;
-      
-      const scaleX = img.naturalWidth / img.offsetWidth;
-      const scaleY = img.naturalHeight / img.offsetHeight;
-      
-      const x = Math.round(face.x / scaleX);
-      const y = Math.round(face.y / scaleY);
-      const width = Math.round(face.width / scaleX);
-      const height = Math.round(face.height / scaleY);
-      
-      if (width <= 0 || height <= 0) return null;
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.min(width, 150);
-      canvas.height = Math.min(height, 150);
-      const ctx = canvas.getContext('2d');
-      
-      const srcX = Math.max(0, x);
-      const srcY = Math.max(0, y);
-      const srcW = Math.min(width, img.naturalWidth - srcX);
-      const srcH = Math.min(height, img.naturalHeight - srcY);
-      
-      if (srcW <= 0 || srcH <= 0) return null;
-      
-      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
-      
-      return canvas.toDataURL('image/jpeg', 0.85);
-    }
-    
-    function showFacePopup(faceId, event) {
-      if (currentPopup) {
-        currentPopup.remove();
-      }
-      
-      const face = faces.find(f => f.id === faceId);
-      if (!face) return;
-      
-      const thumbnail = getFaceThumbnail(face);
-      const fallbackImg = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" style="background:#f3f4f6"><text x="50%" y="50%" text-anchor="middle" dy=".35em" fill="%239ca3af" font-family="system-ui" font-size="14">No photo</text></svg>');
-      
-      const popup = document.createElement('div');
-      popup.className = 'face-popup';
-      popup.innerHTML = '<img src="' + (thumbnail || fallbackImg) + '" alt="Face" onerror="this.src=\'' + fallbackImg + '\'"/><div class="name">' + (face.name || 'No name') + '</div>';
-      
-      document.body.appendChild(popup);
-      
-      const rect = popup.getBoundingClientRect();
-      let left = event.clientX - rect.width / 2;
-      let top = event.clientY - rect.height - 20;
-      
-      if (left < 10) left = 10;
-      if (left + rect.width > window.innerWidth - 10) left = window.innerWidth - rect.width - 10;
-      if (top < 10) top = event.clientY + 20;
-      
-      popup.style.left = left + 'px';
-      popup.style.top = top + 'px';
-      
-      currentPopup = popup;
-    }
-    
-    function hidePopup() {
-      if (currentPopup) {
-        currentPopup.remove();
-        currentPopup = null;
-      }
-    }
-    
     function renderFaces() {
       const container = document.getElementById('photoContainer');
       const img = document.getElementById('photo');
-      
       img.onload = () => {
         faces.forEach(face => {
           const tag = document.createElement('div');
@@ -182,7 +116,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           tag.id = 'tag-' + face.id;
           tag.style.left = (face.x + face.width / 2) + 'px';
           tag.style.top = (face.y + face.height + 5) + 'px';
-          tag.textContent = face.name || 'No name';
+          tag.textContent = face.name || '未标注';
           container.appendChild(tag);
           
           const box = document.createElement('div');
@@ -201,11 +135,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           clickArea.style.width = face.width + 'px';
           clickArea.style.height = face.height + 'px';
           clickArea.style.cursor = 'pointer';
-          clickArea.onclick = (e) => {
-            e.stopPropagation();
-            highlightFace(face.id);
-            showFacePopup(face.id, e);
-          };
+          clickArea.onclick = () => highlightFace(face.id, true);
           container.appendChild(clickArea);
         });
       };
@@ -213,19 +143,24 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
     
     function renderNameList() {
       const grid = document.getElementById('nameGrid');
+      grid.innerHTML = '';
       faces.forEach(face => {
         const item = document.createElement('div');
-        item.className = 'name-item p-3 bg-gray-50 rounded-lg cursor-pointer transition-colors';
+        item.className = 'name-item';
         item.id = 'name-' + face.id;
-        item.textContent = face.name || 'No name';
-        item.onclick = () => highlightFace(face.id);
+        item.textContent = face.name || '未标注';
+        item.onclick = () => highlightFace(face.id, true);
         grid.appendChild(item);
       });
     }
     
-    function highlightFace(faceId) {
-      highlightedFaceId = faceId;
+    function highlightFace(faceId, scroll = false) {
+      if (highlightedFaceId === faceId) {
+        clearHighlights();
+        return;
+      }
       
+      highlightedFaceId = faceId;
       faces.forEach(face => {
         const tag = document.getElementById('tag-' + face.id);
         const box = document.getElementById('box-' + face.id);
@@ -241,19 +176,83 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           nameItem?.classList.remove('highlight');
         }
       });
+      
+      const nameItem = document.getElementById('name-' + faceId);
+      if (scroll && nameItem) {
+        nameItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      const face = faces.find(f => f.id === faceId);
+      if (face) {
+        showToast(face.name || '未标注');
+      }
+    }
+    
+    function clearHighlights() {
+      highlightedFaceId = null;
+      faces.forEach(face => {
+        document.getElementById('tag-' + face.id)?.classList.remove('highlight');
+        document.getElementById('box-' + face.id)?.classList.remove('highlight');
+        document.getElementById('name-' + face.id)?.classList.remove('highlight');
+      });
     }
     
     function setupEventListeners() {
       document.getElementById('toggleMode').onclick = () => {
         showNameList = !showNameList;
         document.getElementById('nameList').classList.toggle('hidden', !showNameList);
+        document.getElementById('toggleMode').textContent = showNameList ? '照片模式' : '名单模式';
       };
       
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.face-popup') && !e.target.closest('#photoContainer')) {
-          hidePopup();
+      document.getElementById('toggleSearch').onclick = () => {
+        showSearch = !showSearch;
+        document.getElementById('searchPanel').classList.toggle('hidden', !showSearch);
+        document.getElementById('toggleSearch').textContent = showSearch ? '关闭点名' : '点名功能';
+        if (showSearch) {
+          document.getElementById('searchInput').focus();
         }
-      });
+      };
+      
+      document.getElementById('showAll').onclick = () => {
+        clearHighlights();
+      };
+      
+      document.getElementById('searchInput').oninput = (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        const resultsContainer = document.getElementById('searchResults');
+        resultsContainer.innerHTML = '';
+        
+        if (!query) return;
+        
+        const matches = faces.filter(face => 
+          face.name && face.name.toLowerCase().includes(query)
+        );
+        
+        matches.slice(0, 12).forEach(face => {
+          const item = document.createElement('div');
+          item.className = 'name-item text-center';
+          item.textContent = face.name;
+          item.onclick = () => {
+            highlightFace(face.id, true);
+            if (!showNameList) {
+              showNameList = true;
+              document.getElementById('nameList').classList.remove('hidden');
+              document.getElementById('toggleMode').textContent = '照片模式';
+            }
+          };
+          resultsContainer.appendChild(item);
+        });
+        
+        if (matches.length === 0) {
+          resultsContainer.innerHTML = '<div class="col-span-full text-center text-gray-500 py-2">未找到匹配的名字</div>';
+        }
+      };
+      
+      document.getElementById('photoContainer').onclick = (e) => {
+        if (e.target.id === 'photo' || e.target.id === 'photoContainer') {
+          clearHighlights();
+        }
+      };
     }
     
     init();
