@@ -25,16 +25,13 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
   });
 
   const facesData = JSON.stringify(sortedFaces);
-  const photoData = JSON.stringify({
-    display_name: photo.display_name || photo.originalname
-  });
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>毕业照标注</title>
+  <title>Graduation Photo</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; }
@@ -50,17 +47,17 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
   <div id="app" class="container mx-auto px-4 py-8">
     <div class="max-w-6xl mx-auto">
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">毕业照标注</h1>
-        <button id="toggleMode" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">切换名单模式</button>
+        <h1 class="text-2xl font-bold text-gray-800">Graduation Photo</h1>
+        <button id="toggleMode" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Toggle List</button>
       </div>
       <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <div id="photoContainer" class="relative inline-block">
-          <img id="photo" src="photo.jpg" alt="毕业照" />
+          <img id="photo" src="photo.jpg" alt="Photo" />
         </div>
       </div>
       <div id="nameList" class="mt-6 hidden">
         <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-semibold text-gray-800 mb-4">名单</h2>
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Name List</h2>
           <div id="nameGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
         </div>
       </div>
@@ -68,9 +65,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
   </div>
   <script>
     const faces = ${facesData};
-    const photoData = ${photoData};
     let showNameList = false;
-    let highlightedFaceId = null;
     function init() { renderFaces(); renderNameList(); setupEventListeners(); }
     function renderFaces() {
       const container = document.getElementById('photoContainer');
@@ -82,7 +77,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           tag.id = 'tag-' + face.id;
           tag.style.left = (face.x + face.width / 2) + 'px';
           tag.style.top = (face.y + face.height + 5) + 'px';
-          tag.textContent = face.name || '未标注';
+          tag.textContent = face.name || 'No name';
           container.appendChild(tag);
           const box = document.createElement('div');
           box.className = 'face-box';
@@ -110,13 +105,12 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
         const item = document.createElement('div');
         item.className = 'name-item p-3 bg-gray-50 rounded-lg cursor-pointer transition-colors';
         item.id = 'name-' + face.id;
-        item.textContent = face.name || '未标注';
+        item.textContent = face.name || 'No name';
         item.onclick = () => highlightFace(face.id);
         grid.appendChild(item);
       });
     }
     function highlightFace(faceId) {
-      highlightedFaceId = faceId;
       faces.forEach(face => {
         const tag = document.getElementById('tag-' + face.id);
         const box = document.getElementById('box-' + face.id);
@@ -150,7 +144,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   try {
     const userId = getUserId(request);
     if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const photos = await sql`
@@ -159,15 +153,15 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const photo = photos[0];
 
     if (!photo) {
-      return NextResponse.json({ error: '照片不存在' }, { status: 404 });
+      return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
     }
 
     if (photo.user_id !== userId) {
-      return NextResponse.json({ error: '无权访问此照片' }, { status: 403 });
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     if (photo.islocked !== 1) {
-      return NextResponse.json({ error: '请先锁定照片再导出' }, { status: 400 });
+      return NextResponse.json({ error: 'Please lock the photo first' }, { status: 400 });
     }
 
     const faces = await sql`
@@ -192,24 +186,23 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       }
     }
 
-    const readme = '毕业照查看器\n\n使用说明：\n1. 解压zip文件\n2. 打开 photos 文件夹，将照片重命名为 photo.jpg\n3. 双击打开 index.html 查看标注\n\n已标注人数: ' + faces.length + ' 人\n生成时间: ' + new Date().toLocaleString();
+    const readme = 'Graduation Photo Viewer\n\nInstructions:\n1. Extract zip\n2. Put your photo as photo.jpg\n3. Open index.html\n\nFaces: ' + faces.length;
     zip.file('README.txt', readme);
 
     const zipBuffer = await zip.generateAsync({ type: 'uint8array' });
 
     const safeFileName = 'graduation-photo-' + Date.now();
-    const encodedFileName = encodeURIComponent(safeFileName);
 
     return new NextResponse(zipBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}.zip`,
+        'Content-Disposition': 'attachment; filename="' + safeFileName + '.zip"',
         'Cache-Control': 'no-cache',
       },
     });
   } catch (error) {
     console.error('Export error:', error);
-    return NextResponse.json({ error: '导出失败', details: error instanceof Error ? error.message : '未知错误' }, { status: 500 });
+    return NextResponse.json({ error: 'Export failed' }, { status: 500 });
   }
 }
