@@ -35,10 +35,12 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; }
-    .face-tag { position: absolute; background: rgba(59, 130, 246, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; transform: translateX(-50%); white-space: nowrap; transition: all 0.2s; }
-    .face-tag.highlight { background: rgba(239, 68, 68, 0.95); transform: translateX(-50%) scale(1.1); z-index: 100; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5); }
-    .face-box { position: absolute; border: 3px solid #3b82f6; border-radius: 4px; pointer-events: none; transition: all 0.2s; }
-    .face-box.highlight { border-color: #ef4444; border-width: 4px; z-index: 100; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+    .face-tag { position: absolute; background: rgba(59, 130, 246, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; transform: translateX(-50%); white-space: nowrap; transition: all 0.2s; opacity: 0; }
+    .face-tag.highlight { background: rgba(239, 68, 68, 0.95); transform: translateX(-50%) scale(1.1); z-index: 100; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5); opacity: 1; }
+    .face-tag.visible { opacity: 1; }
+    .face-box { position: absolute; border: 3px solid #3b82f6; border-radius: 4px; pointer-events: none; transition: all 0.2s; opacity: 0; }
+    .face-box.highlight { border-color: #ef4444; border-width: 4px; z-index: 100; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); opacity: 1; }
+    .face-box.visible { opacity: 1; }
     .name-item { padding: 8px 12px; background: #f3f4f6; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
     .name-item:hover { background: #dbeafe; transform: translateY(-2px); }
     .name-item.highlight { background: #fef2f2; color: #dc2626; font-weight: 600; border-color: #ef4444; }
@@ -91,6 +93,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
     let showNameList = false;
     let showSearch = false;
     let highlightedFaceId = null;
+    let showAllBoxes = false;
     
     function showToast(message) {
       const toast = document.getElementById('toast');
@@ -104,6 +107,28 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       renderFaces();
       renderNameList();
       setupEventListeners();
+    }
+    
+    function updateBoxVisibility() {
+      faces.forEach(face => {
+        const tag = document.getElementById('tag-' + face.id);
+        const box = document.getElementById('box-' + face.id);
+        
+        if (showAllBoxes) {
+          tag?.classList.add('visible');
+          box?.classList.add('visible');
+          tag?.classList.remove('highlight');
+          box?.classList.remove('highlight');
+        } else {
+          tag?.classList.remove('visible');
+          box?.classList.remove('visible');
+        }
+        
+        if (highlightedFaceId === face.id) {
+          tag?.classList.add('highlight');
+          box?.classList.add('highlight');
+        }
+      });
     }
     
     function renderFaces() {
@@ -150,6 +175,8 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           clickArea.onclick = () => highlightFace(face.id, true);
           container.appendChild(clickArea);
         });
+        
+        updateBoxVisibility();
       };
       
       if (img.complete && img.naturalWidth > 0) {
@@ -181,6 +208,9 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       }
       
       highlightedFaceId = faceId;
+      showAllBoxes = false;
+      document.getElementById('showAll').textContent = '显示全部';
+      
       faces.forEach(face => {
         const tag = document.getElementById('tag-' + face.id);
         const box = document.getElementById('box-' + face.id);
@@ -189,6 +219,8 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
         if (face.id === faceId) {
           tag?.classList.add('highlight');
           box?.classList.add('highlight');
+          tag?.classList.remove('visible');
+          box?.classList.remove('visible');
           nameItem?.classList.add('highlight');
         } else {
           tag?.classList.remove('highlight');
@@ -196,6 +228,8 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
           nameItem?.classList.remove('highlight');
         }
       });
+      
+      updateBoxVisibility();
       
       const nameItem = document.getElementById('name-' + faceId);
       if (scroll && nameItem) {
@@ -210,10 +244,31 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
     
     function clearHighlights() {
       highlightedFaceId = null;
+      updateBoxVisibility();
+      
       faces.forEach(face => {
-        document.getElementById('tag-' + face.id)?.classList.remove('highlight');
-        document.getElementById('box-' + face.id)?.classList.remove('highlight');
-        document.getElementById('name-' + face.id)?.classList.remove('highlight');
+        const tag = document.getElementById('tag-' + face.id);
+        const box = document.getElementById('box-' + face.id);
+        const nameItem = document.getElementById('name-' + face.id);
+        nameItem?.classList.remove('highlight');
+      });
+    }
+    
+    function toggleShowAll() {
+      showAllBoxes = !showAllBoxes;
+      highlightedFaceId = null;
+      
+      if (showAllBoxes) {
+        document.getElementById('showAll').textContent = '隐藏全部';
+      } else {
+        document.getElementById('showAll').textContent = '显示全部';
+      }
+      
+      updateBoxVisibility();
+      
+      faces.forEach(face => {
+        const nameItem = document.getElementById('name-' + face.id);
+        nameItem?.classList.remove('highlight');
       });
     }
     
@@ -234,7 +289,7 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       };
       
       document.getElementById('showAll').onclick = () => {
-        clearHighlights();
+        toggleShowAll();
       };
       
       document.getElementById('searchInput').oninput = (e) => {
@@ -269,10 +324,8 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       };
       
       document.getElementById('photoContainer').onclick = (e) => {
-        if (e.target.id === 'photo' || e.target.id === 'photoContainer' || e.target.classList.contains('face-click-area')) {
-          if (e.target.id === 'photo' || e.target.id === 'photoContainer') {
-            clearHighlights();
-          }
+        if (e.target.id === 'photo' || e.target.id === 'photoContainer') {
+          clearHighlights();
         }
       };
     }
