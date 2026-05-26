@@ -109,36 +109,56 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
     function renderFaces() {
       const container = document.getElementById('photoContainer');
       const img = document.getElementById('photo');
-      img.onload = () => {
+      
+      const renderBoxes = () => {
+        const scaleX = img.offsetWidth / img.naturalWidth;
+        const scaleY = img.offsetHeight / img.naturalHeight;
+        
+        container.querySelectorAll('.face-tag, .face-box, .face-click-area').forEach(el => el.remove());
+        
         faces.forEach(face => {
+          const scaledX = face.x * scaleX;
+          const scaledY = face.y * scaleY;
+          const scaledWidth = face.width * scaleX;
+          const scaledHeight = face.height * scaleY;
+          
           const tag = document.createElement('div');
           tag.className = 'face-tag';
           tag.id = 'tag-' + face.id;
-          tag.style.left = (face.x + face.width / 2) + 'px';
-          tag.style.top = (face.y + face.height + 5) + 'px';
+          tag.style.left = (scaledX + scaledWidth / 2) + 'px';
+          tag.style.top = (scaledY + scaledHeight + 5) + 'px';
           tag.textContent = face.name || '未标注';
           container.appendChild(tag);
           
           const box = document.createElement('div');
           box.className = 'face-box';
           box.id = 'box-' + face.id;
-          box.style.left = face.x + 'px';
-          box.style.top = face.y + 'px';
-          box.style.width = face.width + 'px';
-          box.style.height = face.height + 'px';
+          box.style.left = scaledX + 'px';
+          box.style.top = scaledY + 'px';
+          box.style.width = scaledWidth + 'px';
+          box.style.height = scaledHeight + 'px';
           container.appendChild(box);
           
           const clickArea = document.createElement('div');
+          clickArea.className = 'face-click-area';
           clickArea.style.position = 'absolute';
-          clickArea.style.left = face.x + 'px';
-          clickArea.style.top = face.y + 'px';
-          clickArea.style.width = face.width + 'px';
-          clickArea.style.height = face.height + 'px';
+          clickArea.style.left = scaledX + 'px';
+          clickArea.style.top = scaledY + 'px';
+          clickArea.style.width = scaledWidth + 'px';
+          clickArea.style.height = scaledHeight + 'px';
           clickArea.style.cursor = 'pointer';
           clickArea.onclick = () => highlightFace(face.id, true);
           container.appendChild(clickArea);
         });
       };
+      
+      if (img.complete && img.naturalWidth > 0) {
+        renderBoxes();
+      }
+      
+      img.onload = renderBoxes;
+      
+      window.addEventListener('resize', renderBoxes);
     }
     
     function renderNameList() {
@@ -249,8 +269,10 @@ function generateOfflineHTML(photo: any, faces: any[]): string {
       };
       
       document.getElementById('photoContainer').onclick = (e) => {
-        if (e.target.id === 'photo' || e.target.id === 'photoContainer') {
-          clearHighlights();
+        if (e.target.id === 'photo' || e.target.id === 'photoContainer' || e.target.classList.contains('face-click-area')) {
+          if (e.target.id === 'photo' || e.target.id === 'photoContainer') {
+            clearHighlights();
+          }
         }
       };
     }
