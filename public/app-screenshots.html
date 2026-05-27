@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毕业合照应用 - 1:1界面展示</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+
+    h1 {
+      color: white;
+      font-size: 36px;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .screenshots {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+      max-width: 1400px;
+    }
+
+    .screenshot {
+      width: 420px;
+      background: white;
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .screenshot:hover {
+      transform: translateY(-15px) rotateX(5deg);
+    }
+
+    .phone-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: white;
+      overflow: hidden;
+    }
+
+    .status-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: #1a1a2e;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 8px;
+      z-index: 100;
+    }
+
+    .notch {
+      width: 120px;
+      height: 28px;
+      background: #1a1a2e;
+      border-radius: 0 0 16px 16px;
+    }
+
+    .content {
+      padding-top: 44px;
+      height: 100%;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Common Header */
+    .header {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .header-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+    }
+
+    /* Photo List Screen */
+    .photo-list {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .photo-item {
+      aspect-ratio: 1;
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+
+    .photo-item:hover {
+      transform: scale(1.02);
+    }
+
+    .photo-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.7) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 12px;
+    }
+
+    .photo-name {
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .photo-meta {
+      display: flex;
+      gap: 6px;
+    }
+
+    .photo-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .badge-lock {
+      background: #10b981;
+      color: white;
+    }
+
+    .badge-unlock {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .badge-code {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    /* Annotation Screen */
+    .annotation-area {
+      height: calc(100% - 68px);
+      position: relative;
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+      display: flex;
+    }
+
+    .photo-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .photo-container img {
+      width: 90%;
+      height: 85%;
+      object-fit: cover;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+
+    .face-box {
+      position: absolute;
+      border: 4px solid #3b82f6;
+      border-radius: 8px;
+      background: rgba(59, 130, 246, 0.15);
+      transition: all 0.3s ease;
+    }
+
+    .face-box:hover {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.2);
+      transform: scale(1.05);
+    }
+
+    .face-box.active {
+      border-color: #ef4444;
+      border-width: 5px;
+      background: rgba(239, 68, 68, 0.25);
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+    }
+
+    .face-label {
+      position: absolute;
+      top: -32px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3b82f6;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .face-box.active .face-label {
+      background: #ef4444;
+      font-size: 12px;
+    }
+
+    /* Face positions */
+    .face-box:nth-child(1) { left: 12%; top: 18%; width: 65px; height: 85px; }
+    .face-box:nth-child(2) { left: 38%; top: 12%; width: 70px; height: 90px; }
+    .face-box:nth-child(3) { left: 62%; top: 22%; width: 62px; height: 80px; }
+
+    .face-panel {
+      width: 130px;
+      background: white;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .face-item {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .face-item.active {
+      border-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .face-item img {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+
+    .face-item .name {
+      font-size: 11px;
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    .face-item .index {
+      font-size: 9px;
+      color: #94a3b8;
+    }
+
+    .action-bar {
+      padding: 12px 16px;
+      background: white;
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .action-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .action-btn.secondary {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    /* View Mode Screen */
+    .view-screen {
+      height: calc(100% - 68px);
+      background: linear-gradient(180deg, #1e1e2e 0%, #2d2d44 100%);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view-photo-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 24px;
+    }
+
+    .view-photo-area img {
+      width: 88%;
+      height: 90%;
+      object-fit: cover;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .name-tag {
+      position: absolute;
+      background: rgba(102, 126, 234, 0.95);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .name-tag:hover {
+      background: #ef4444;
+      transform: translateX(-50%) scale(1.1);
+    }
+
+    .name-tag::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: rgba(102, 126, 234, 0.95);
+    }
+
+    .name-tag:hover::after {
+      border-top-color: #ef4444;
+    }
+
+    .name-tag:nth-child(2) { left: 20%; top: 25%; }
+    .name-tag:nth-child(3) { left: 45%; top: 18%; }
+    .name-tag:nth-child(4) { left: 68%; top: 28%; }
+    .name-tag:nth-child(5) { left: 80%; top: 45%; }
+
+    .view-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 16px;
+    }
+
+    .view-btn {
+      width: 50px;
+      height: 50px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .view-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .search-section {
+      padding: 16px 20px 20px;
+      background: white;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: #f1f5f9;
+      border-radius: 14px;
+      padding: 12px 16px;
+      gap: 10px;
+    }
+
+    .search-icon {
+      font-size: 18px;
+      color: #94a3b8;
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      outline: none;
+      color: #1e293b;
+    }
+
+    .search-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Screenshot Label */
+    .screenshot-label {
+      padding: 20px 24px;
+      background: white;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .screenshot-label h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .screenshot-label p {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    @media (max-width: 480px) {
+      .screenshot {
+        width: 100%;
+        max-width: 380px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>📱 毕业合照应用 - 界面展示</h1>
+
+  <div class="screenshots">
+    <!-- Screenshot 1: Photo List -->
+    <div class="screenshot">
+      <div class="phone-frame">
+        <div class="status-bar">
+          <div class="notch"></div>
+        </div>
+        <div class="content">
+          <div class="header">
+            <svg width="24" height="24" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <span class="header-title">我的照片</span>
+            <div class="header-icon">+</div>
+          </div>
+          
+          <div class="photo-list">
+            <div class="photo-item">
+              <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=400&fit=crop" alt="毕业照">
+              <div class="photo-overlay">
+                <div class="photo-name">初三六班毕业照</div>
+                <div class="photo-meta">
+                  <span class="photo-badge badge-lock">🔒 已锁定</span>
+                  <span class="photo-badge badge-code">👁️ 12人</span>
+                </div>
+              </div>
+            </div>
+            <div class="photo-item">
+              <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=400&h=400&fit=crop" alt="毕业照">
+              <div class="photo-overlay">
+                <div class="photo-name">高二三班合影</div>
+                <div class="photo-meta">
+                  <span class="photo-badge badge-unlock">🔓 未锁定</span>
+                </div>
+              </div>
+            </div>
+            <div class="photo-item">
+              <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=400&fit=crop" alt="毕业照">
+              <div class="photo-overlay">
+                <div class="photo-name">高三一班</div>
+                <div class="photo-meta">
+                  <span class="photo-badge badge-lock">🔒 已锁定</span>
+                  <span class="photo-badge badge-code">👁️ 45人</span>
+                </div>
+              </div>
+            </div>
+            <div class="photo-item">
+              <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=400&fit=crop" alt="毕业照">
+              <div class="photo-overlay">
+                <div class="photo-name">大学班级照</div>
+                <div class="photo-meta">
+                  <span class="photo-badge badge-lock">🔒 已锁定</span>
+                  <span class="photo-badge badge-code">👁️ 38人</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="screenshot-label">
+        <h3>📸 照片管理</h3>
+        <p>上传、锁定、分享毕业照，轻松管理</p>
+      </div>
+    </div>
+
+    <!-- Screenshot 2: Face Annotation -->
+    <div class="screenshot">
+      <div class="phone-frame">
+        <div class="status-bar">
+          <div class="notch"></div>
+        </div>
+        <div class="content">
+          <div class="header">
+            <svg width="24" height="24" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <span class="header-title">人脸标注</span>
+            <svg width="24" height="24" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+              <path d="M17 21v-8H7v8M7 3v5h8"/>
+            </svg>
+          </div>
+          
+          <div class="annotation-area">
+            <div class="photo-container">
+              <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=400&fit=crop" alt="毕业照">
+              
+              <div class="face-box" style="left: 12%; top: 18%; width: 65px; height: 85px;">
+                <div class="face-label">张伟</div>
+              </div>
+              <div class="face-box active" style="left: 38%; top: 12%; width: 70px; height: 90px;">
+                <div class="face-label">李娜</div>
+              </div>
+              <div class="face-box" style="left: 62%; top: 22%; width: 62px; height: 80px;">
+                <div class="face-label">王强</div>
+              </div>
+            </div>
+            
+            <div class="face-panel">
+              <div class="face-item">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" alt="头像">
+                <span class="name">张伟</span>
+                <span class="index">人脸 #1</span>
+              </div>
+              <div class="face-item active">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="头像">
+                <span class="name">李娜</span>
+                <span class="index">人脸 #2</span>
+              </div>
+              <div class="face-item">
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" alt="头像">
+                <span class="name">王强</span>
+                <span class="index">人脸 #3</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="action-bar">
+            <button class="action-btn primary">✓ 保存标注</button>
+            <button class="action-btn secondary">🗑️ 删除</button>
+          </div>
+        </div>
+      </div>
+      <div class="screenshot-label">
+        <h3>🎯 智能标注</h3>
+        <p>点击人脸，快速添加姓名标注</p>
+      </div>
+    </div>
+
+    <!-- Screenshot 3: View & Search -->
+    <div class="screenshot">
+      <div class="phone-frame">
+        <div class="status-bar">
+          <div class="notch"></div>
+        </div>
+        <div class="content">
+          <div class="header">
+            <svg width="24" height="24" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <span class="header-title">查看点名</span>
+            <svg width="24" height="24" fill="none" stroke="#667eea" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          
+          <div class="view-screen">
+            <div class="view-photo-area">
+              <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=400&fit=crop" alt="毕业照">
+              
+              <div class="name-tag">张伟</div>
+              <div class="name-tag">李娜</div>
+              <div class="name-tag">王强</div>
+              <div class="name-tag">刘洋</div>
+              
+              <div class="view-controls">
+                <div class="view-btn">📋</div>
+                <div class="view-btn">🔍</div>
+                <div class="view-btn">📥</div>
+              </div>
+            </div>
+            
+            <div class="search-section">
+              <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="输入姓名搜索..." value="李娜">
+                <button class="search-btn">点名</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="screenshot-label">
+        <h3>🎓 查看点名</h3>
+        <p>名单模式 + 点名搜索 + 离线导出</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毕业合照 - 离线导出功能</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 50px;
+      max-width: 1200px;
+    }
+
+    .showcase {
+      text-align: center;
+    }
+
+    .showcase h2 {
+      color: white;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .phone {
+      width: 360px;
+      background: #1a1a2e;
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 
+        0 0 0 2px #333,
+        0 30px 80px rgba(0,0,0,0.5),
+        0 0 100px rgba(102, 126, 234, 0.2);
+    }
+
+    .screen {
+      background: white;
+      border-radius: 32px;
+      overflow: hidden;
+    }
+
+    .notch-area {
+      height: 32px;
+      background: #1a1a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .notch {
+      width: 100px;
+      height: 24px;
+      background: #1a1a2e;
+      border-radius: 0 0 16px 16px;
+    }
+
+    .content {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Export Screen */
+    .export-header {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .export-header h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .export-preview {
+      padding: 20px;
+    }
+
+    .preview-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .preview-image {
+      aspect-ratio: 16/10;
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .preview-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.8) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+    }
+
+    .preview-title {
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .preview-stats {
+      display: flex;
+      gap: 12px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.9);
+      font-size: 12px;
+    }
+
+    .export-info {
+      padding: 16px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .info-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .info-value.success {
+      color: #10b981;
+    }
+
+    .export-actions {
+      padding: 16px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .export-btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .export-btn.primary {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+    }
+
+    .export-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+    }
+
+    .export-btn.secondary {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    /* ZIP Preview */
+    .zip-preview {
+      padding: 20px;
+    }
+
+    .zip-card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .zip-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      border-radius: 20px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 8px 30px rgba(245, 158, 11, 0.3);
+    }
+
+    .zip-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .zip-size {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+
+    .zip-contents {
+      text-align: left;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .zip-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .zip-item .icon {
+      font-size: 16px;
+    }
+
+    .zip-item.folder {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    /* Features */
+    .features {
+      margin-top: 50px;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .features h2 {
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 30px;
+    }
+
+    .feature-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 24px;
+      width: 200px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      background: rgba(255,255,255,0.15);
+      transform: translateY(-5px);
+    }
+
+    .feature-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 14px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .feature-card h4 {
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .feature-card p {
+      color: rgba(255,255,255,0.7);
+      font-size: 11px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .phone {
+        width: 320px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="showcase">
+      <h2>📥 导出准备</h2>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch-area">
+            <div class="notch"></div>
+          </div>
+          <div class="content">
+            <div class="export-header">
+              <svg width="20" height="20" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+              <h3>导出设置</h3>
+              <svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+
+            <div class="export-preview">
+              <div class="preview-card">
+                <div class="preview-image">
+                  <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=400&fit=crop" alt="毕业照">
+                  <div class="preview-overlay">
+                    <div class="preview-title">初三六班毕业照 2026</div>
+                    <div class="preview-stats">
+                      <div class="stat">👥 48人</div>
+                      <div class="stat">🔒 已锁定</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="export-info">
+                  <div class="info-row">
+                    <span class="info-label">照片质量</span>
+                    <span class="info-value">原图</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">标注人数</span>
+                    <span class="info-value">48人</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">预估大小</span>
+                    <span class="info-value success">~2.5 MB</span>
+                  </div>
+                </div>
+
+                <div class="export-actions">
+                  <button class="export-btn secondary">👁️ 预览</button>
+                  <button class="export-btn primary">
+                    📥 导出 ZIP
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="showcase">
+      <h2>📦 导出的 ZIP 包</h2>
+      <div class="phone">
+        <div class="screen">
+          <div class="notch-area">
+            <div class="notch"></div>
+          </div>
+          <div class="content">
+            <div class="export-header">
+              <svg width="20" height="20" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+              </svg>
+              <h3>解压后内容</h3>
+              <div style="width: 20px;"></div>
+            </div>
+
+            <div class="zip-preview">
+              <div class="zip-card">
+                <div class="zip-icon">📦</div>
+                <div class="zip-name">graduation-photo.zip</div>
+                <div class="zip-size">已解压 · 2.5 MB</div>
+
+                <div class="zip-contents">
+                  <div class="zip-item folder">
+                    <span class="icon">📁</span>
+                    <span>photos/</span>
+                  </div>
+                  <div class="zip-item">
+                    <span class="icon">🖼️</span>
+                    <span>photo.jpg</span>
+                  </div>
+                  <div class="zip-item">
+                    <span class="icon">📄</span>
+                    <span>index.html</span>
+                  </div>
+                  <div class="zip-item">
+                    <span class="icon">📝</span>
+                    <span>README.txt</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="features">
+    <h2>✨ 离线导出的优势</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h4>无需网络</h4>
+        <p>离线也能查看点名</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h4>随身携带</h4>
+        <p>发到微信随时查看</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h4>安全可靠</h4>
+        <p>本地存储不泄露</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h4>完整功能</h4>
+        <p>名单+点名+搜索</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

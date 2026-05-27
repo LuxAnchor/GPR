@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毕业合照应用 - 界面介绍</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 60px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 48px;
+      font-weight: 900;
+      margin-bottom: 16px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      font-size: 20px;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+
+    .screenshots {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 40px;
+      justify-items: center;
+    }
+
+    .screenshot-card {
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 420px;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .screenshot-card:hover {
+      transform: translateY(-10px) scale(1.02);
+    }
+
+    .screenshot-header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .screenshot-header .dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .screenshot-header .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .screenshot-header .dot.red { background: #ff5f56; }
+    .screenshot-header .dot.yellow { background: #ffbd2e; }
+    .screenshot-header .dot.green { background: #27ca40; }
+
+    .screenshot-header .title {
+      flex: 1;
+      text-align: center;
+      color: rgba(255,255,255,0.8);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .screenshot-content {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+
+    .phone-frame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      height: 560px;
+      background: white;
+      border-radius: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      overflow: hidden;
+      border: 8px solid #1a1a2e;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 28px;
+      background: #1a1a2e;
+      border-radius: 0 0 20px 20px;
+      z-index: 10;
+    }
+
+    .phone-content {
+      padding-top: 32px;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    }
+
+    .app-header {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .app-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .app-header .icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+    }
+
+    /* Screen 1 - Photo List */
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .photo-card {
+      aspect-ratio: 1;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: relative;
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-card .badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #10b981;
+      color: white;
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .photo-card .badge.locked {
+      background: #f59e0b;
+    }
+
+    /* Screen 2 - Annotate */
+    .annotate-view {
+      height: calc(100% - 64px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .photo-area {
+      flex: 1;
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .photo-area img {
+      width: 90%;
+      height: 70%;
+      object-fit: cover;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .face-box {
+      position: absolute;
+      border: 3px solid #3b82f6;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .face-box.active {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .face-box:nth-child(1) { left: 15%; top: 20%; width: 50px; height: 65px; }
+    .face-box:nth-child(2) { left: 45%; top: 15%; width: 55px; height: 70px; }
+    .face-box:nth-child(3) { left: 70%; top: 25%; width: 48px; height: 62px; }
+
+    .face-box span {
+      position: absolute;
+      bottom: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3b82f6;
+      color: white;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .face-box.active span {
+      background: #ef4444;
+    }
+
+    .sidebar {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 100px;
+      background: white;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .face-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+
+    .face-item img {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .face-item .name {
+      font-size: 10px;
+      color: #64748b;
+    }
+
+    .action-bar {
+      padding: 12px 16px;
+      background: white;
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .action-btn.primary {
+      background: #10b981;
+      color: white;
+    }
+
+    .action-btn.secondary {
+      background: #e2e8f0;
+      color: #64748b;
+    }
+
+    /* Screen 3 - View Mode */
+    .view-mode {
+      height: calc(100% - 64px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view-photo {
+      flex: 1;
+      position: relative;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .view-photo img {
+      width: 85%;
+      height: 75%;
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+
+    .name-tags {
+      position: absolute;
+    }
+
+    .name-tag {
+      position: absolute;
+      background: rgba(102, 126, 234, 0.95);
+      color: white;
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .name-tag::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+      border-top-color: rgba(102, 126, 234, 0.95);
+    }
+
+    .name-tag:nth-child(1) { left: 25%; top: 30%; }
+    .name-tag:nth-child(2) { left: 50%; top: 25%; }
+    .name-tag:nth-child(3) { left: 72%; top: 35%; }
+
+    .view-controls {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+    }
+
+    .view-btn {
+      width: 44px;
+      height: 44px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      font-size: 18px;
+    }
+
+    .search-bar {
+      padding: 12px 16px;
+      background: white;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 16px;
+      background: #f1f5f9;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .card-label {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .card-label h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .card-label p {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .features-list {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feature-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .feature-icon.blue { background: #dbeafe; }
+    .feature-icon.green { background: #dcfce7; }
+    .feature-icon.purple { background: #f3e8ff; }
+    .feature-icon.orange { background: #ffedd5; }
+
+    .feature-text h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+
+    .feature-text p {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 60px;
+      color: white;
+      opacity: 0.8;
+    }
+
+    .footer p {
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .screenshots {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>毕业合照应用</h1>
+      <p>简洁优雅的合照管理与展示平台</p>
+    </div>
+
+    <div class="screenshots">
+      <!-- Screen 1: Photo Management -->
+      <div class="screenshot-card">
+        <div class="screenshot-header">
+          <div class="dots">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+          </div>
+          <div class="title">photo-management.png</div>
+        </div>
+        <div class="screenshot-content">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-content">
+              <div class="app-header">
+                <svg width="20" height="20" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+                <h2>我的照片</h2>
+                <div class="icon">+</div>
+              </div>
+              
+              <div class="photo-grid">
+                <div class="photo-card">
+                  <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=400&fit=crop" alt="毕业照">
+                  <div class="badge">已锁定</div>
+                </div>
+                <div class="photo-card">
+                  <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=400&h=400&fit=crop" alt="毕业照">
+                  <div class="badge locked">未锁定</div>
+                </div>
+                <div class="photo-card">
+                  <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=400&fit=crop" alt="毕业照">
+                  <div class="badge">已锁定</div>
+                </div>
+                <div class="photo-card">
+                  <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=400&fit=crop" alt="毕业照">
+                  <div class="badge">已锁定</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-label">
+            <h3>📸 照片管理</h3>
+            <p>上传、锁定、分享毕业照</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 2: Face Annotation -->
+      <div class="screenshot-card">
+        <div class="screenshot-header">
+          <div class="dots">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+          </div>
+          <div class="title">face-annotation.png</div>
+        </div>
+        <div class="screenshot-content">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-content">
+              <div class="app-header">
+                <svg width="20" height="20" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+                <h2>人脸标注</h2>
+                <svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                  <path d="M17 21v-8H7v8M7 3v5h8"/>
+                </svg>
+              </div>
+              
+              <div class="annotate-view">
+                <div class="photo-area">
+                  <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=400&fit=crop" alt="毕业照">
+                  <div class="face-box">张伟<span>1</span></div>
+                  <div class="face-box active">李娜<span>2</span></div>
+                  <div class="face-box">王强<span>3</span></div>
+                  
+                  <div class="sidebar">
+                    <div class="face-item">
+                      <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" alt="头像">
+                      <span class="name">张伟</span>
+                    </div>
+                    <div class="face-item" style="border: 2px solid #ef4444;">
+                      <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="头像">
+                      <span class="name">李娜</span>
+                    </div>
+                    <div class="face-item">
+                      <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" alt="头像">
+                      <span class="name">王强</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="action-bar">
+                  <button class="action-btn primary">✓ 保存</button>
+                  <button class="action-btn secondary">🗑️ 删除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-label">
+            <h3>🎯 智能标注</h3>
+            <p>点击人脸，快速添加姓名</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 3: View & Search -->
+      <div class="screenshot-card">
+        <div class="screenshot-header">
+          <div class="dots">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+          </div>
+          <div class="title">view-search.png</div>
+        </div>
+        <div class="screenshot-content">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-content">
+              <div class="app-header">
+                <svg width="20" height="20" fill="none" stroke="#64748b" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+                <h2>查看点名</h2>
+                <svg width="20" height="20" fill="none" stroke="#667eea" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                </svg>
+              </div>
+              
+              <div class="view-mode">
+                <div class="view-photo">
+                  <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=400&fit=crop" alt="毕业照">
+                  
+                  <div class="name-tags">
+                    <div class="name-tag">张伟</div>
+                    <div class="name-tag">李娜</div>
+                    <div class="name-tag">王强</div>
+                  </div>
+                  
+                  <div class="view-controls">
+                    <div class="view-btn">📋</div>
+                    <div class="view-btn">🔍</div>
+                    <div class="view-btn">📥</div>
+                  </div>
+                </div>
+                
+                <div class="search-bar">
+                  <input type="text" class="search-input" placeholder="🔍 输入姓名搜索..." value="李娜">
+                </div>
+                
+                <div class="features-list">
+                  <div class="feature-item">
+                    <div class="feature-icon blue">📋</div>
+                    <div class="feature-text">
+                      <h4>名单模式</h4>
+                      <p>显示完整姓名列表</p>
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-icon green">🔍</div>
+                    <div class="feature-text">
+                      <h4>点名功能</h4>
+                      <p>搜索姓名快速定位</p>
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-icon purple">📥</div>
+                    <div class="feature-text">
+                      <h4>离线导出</h4>
+                      <p>打包ZIP随身携带</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-label">
+            <h3>🎓 查看点名</h3>
+            <p>名单+点名+离线导出</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>毕业合照应用 · 让回忆更美好</p>
+    </div>
+  </div>
+</body>
+</html>
