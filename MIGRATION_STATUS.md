@@ -2,7 +2,7 @@
 
 ## 📋 总体状态
 
-**状态**: ✅ 完整迁移完成（2026-05-26 更新）
+**状态**: ✅ 完整迁移完成（2026-05-27 更新）
 **版本**: GPR_vercel (Vercel 适配版)
 **源版本**: GPR_git (Vite 本地版)
 
@@ -38,6 +38,16 @@
 - ✅ 离线导出功能
 
 ## 🐛 问题修复记录
+
+### 2026-05-27 用户体验优化
+
+#### 1. 导出按钮状态提示
+- **功能**: 点击导出后显示"导出中..."，按钮禁用防止重复点击
+- **文件**: `app/admin/page.tsx`
+
+#### 2. 保存进度显示
+- **功能**: 标注保存时显示进度（如 "保存中 3/48"）
+- **文件**: `app/admin/photo/[id]/annotate/page.tsx`, `app/annotate/[code]/page.tsx`
 
 ### 2026-05-26 问题修复
 
@@ -109,6 +119,7 @@
 
 | 日期 | 变更 | 相关文件 |
 |------|------|---------|
+| 2026-05-27 | 添加导出和保存进度提示 | app/admin/page.tsx, app/admin/photo/[id]/annotate/page.tsx, app/annotate/[code]/page.tsx |
 | 2026-05-26 | 修复导出和离线HTML问题 | 多个文件 |
 | 2026-05-26 | 修复照片锁定API | app/api/photos/[id]/route.ts |
 | 2026-05-26 | 修复Vercel Blob配置 | lib/storage.ts |
