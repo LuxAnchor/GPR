@@ -37,6 +37,7 @@ export default function AnnotatePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savingProgress, setSavingProgress] = useState('');
   const [faces, setFaces] = useState<FaceBox[]>([]);
   const [selectedFace, setSelectedFace] = useState<string | null>(null);
 
@@ -162,8 +163,12 @@ export default function AnnotatePage() {
       
       const newFaces = faces.filter(f => f.isNew && !f.id);
       const existingFaces = faces.filter(f => f.id);
+      const totalFaces = existingFaces.length + newFaces.length;
+      let savedCount = 0;
       
       for (const face of existingFaces) {
+        savedCount++;
+        setSavingProgress(`${savedCount}/${totalFaces}`);
         await fetch(`/api/photos/faces/${face.id}`, {
           method: 'PUT',
           headers: {
@@ -181,6 +186,8 @@ export default function AnnotatePage() {
       }
       
       for (const face of newFaces) {
+        savedCount++;
+        setSavingProgress(`${savedCount}/${totalFaces}`);
         await fetch('/api/photos/faces', {
           method: 'POST',
           headers: {
@@ -204,6 +211,7 @@ export default function AnnotatePage() {
       alert(err instanceof Error ? err.message : '保存失败');
     } finally {
       setSaving(false);
+      setSavingProgress('');
     }
   };
 
@@ -263,12 +271,18 @@ export default function AnnotatePage() {
             className="flex items-center px-3 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 touch-manipulation"
           >
             {saving ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1 sm:mr-2"></div>
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1 sm:mr-2"></div>
+                <span className="hidden sm:inline">{savingProgress ? `保存中 ${savingProgress}` : '保存中...'}</span>
+                <span className="sm:hidden">{savingProgress ? savingProgress : '保存'}</span>
+              </>
             ) : (
-              <Save className="h-5 w-5 mr-1 sm:mr-2" />
+              <>
+                <Save className="h-5 w-5 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">保存标注</span>
+                <span className="sm:hidden">保存</span>
+              </>
             )}
-            <span className="hidden sm:inline">{saving ? '保存中...' : '保存标注'}</span>
-            <span className="sm:hidden">{saving ? '保存中' : '保存'}</span>
           </button>
         </div>
       </div>

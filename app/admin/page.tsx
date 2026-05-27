@@ -261,7 +261,7 @@ export default function AdminPage() {
     });
   };
 
-  const handleExport = async (photoId: string) => {
+  const handleExport = async (photoId: string, setExporting: (v: boolean) => void) => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       router.push('/login');
@@ -269,6 +269,7 @@ export default function AdminPage() {
     }
 
     try {
+      setExporting(true);
       const response = await fetch(`/api/photos/${photoId}/export`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -296,6 +297,8 @@ export default function AdminPage() {
     } catch (err: any) {
       console.error('Export error:', err);
       alert(err.message || '导出失败，请重试');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -305,8 +308,9 @@ export default function AdminPage() {
     const [isSettingViewCode, setIsSettingViewCode] = useState(false);
     const [viewCode, setViewCode] = useState('');
     const [isSettingAnnotateCode, setIsSettingAnnotateCode] = useState(false);
-    const [annotateViewCode, setAnnotateViewCode] = useState('');
+    const [annotateViewCode, setAnnotateViewCode] = useState(photo.annotate_view_code || '');
     const [updatingName, setUpdatingName] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     const handleSaveName = async () => {
       const token = localStorage.getItem('auth_token');
@@ -521,12 +525,16 @@ export default function AdminPage() {
           <div className="flex flex-wrap gap-2 mt-3">
             {photo.islocked === 1 && (
               <button
-                onClick={() => handleExport(photo.id)}
-                className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 flex items-center justify-center touch-manipulation"
+                onClick={() => handleExport(photo.id, setExporting)}
+                disabled={exporting}
+                className="flex-1 min-w-[calc(50%-0.25rem)] px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 flex items-center justify-center touch-manipulation disabled:opacity-50"
               >
-                <Download className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">导出</span>
-                <span className="sm:hidden">导出</span>
+                {exporting ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1"></div>
+                ) : (
+                  <Download className="h-4 w-4 mr-1" />
+                )}
+                <span>{exporting ? '导出中...' : '导出'}</span>
               </button>
             )}
             <button
