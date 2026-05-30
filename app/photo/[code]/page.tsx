@@ -42,6 +42,7 @@ export default function PublicPhotoPage() {
   const [nameInput, setNameInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const sortedFaces = useMemo(() => {
     if (!photo) return [];
@@ -64,6 +65,7 @@ export default function PublicPhotoPage() {
     try {
       setLoading(true);
       setError(null);
+      setImageError(false);
       const response = await fetch(`/api/photos/public?code=${code}`);
 
       if (!response.ok) {
@@ -79,6 +81,13 @@ export default function PublicPhotoPage() {
       const data = await response.json();
       setPhoto(data);
       setIsVerified(true);
+      
+      if (data.filepath) {
+        const img = new Image();
+        img.onload = () => setImageLoaded(true);
+        img.onerror = () => setImageError(true);
+        img.src = data.filepath;
+      }
     } catch (err: any) {
       setError(err.message || '加载失败');
     } finally {
@@ -244,15 +253,45 @@ export default function PublicPhotoPage() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="relative" onClick={handleImageClick}>
-            {!imageLoaded && (
-              <div className="w-full bg-gray-200 animate-pulse" style={{ paddingBottom: '60%' }}></div>
+            {!imageLoaded && !imageError && (
+              <div className="w-full bg-gray-200 flex items-center justify-center" style={{ minHeight: '60vh' }}>
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-gray-600">照片加载中...</p>
+                </div>
+              </div>
+            )}
+            {imageError && (
+              <div className="w-full bg-red-50 flex items-center justify-center" style={{ minHeight: '60vh' }}>
+                <div className="text-center p-8">
+                  <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+                  <p className="text-red-600 mb-2">照片加载失败</p>
+                  <button 
+                    onClick={() => {
+                      setImageError(false);
+                      if (photo?.filepath) {
+                        const img = new Image();
+                        img.onload = () => setImageLoaded(true);
+                        img.onerror = () => setImageError(true);
+                        img.src = photo.filepath;
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    重新加载
+                  </button>
+                </div>
+              </div>
             )}
             <img
               ref={imageRef}
               src={photo.filepath}
               alt={photo.display_name || photo.originalname}
               className={`w-full h-auto ${imageLoaded ? 'block' : 'hidden'}`}
+              loading="eager"
+              fetchPriority="high"
               onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
             />
 
             {photo.faces.map((face) => {

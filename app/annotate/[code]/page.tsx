@@ -194,7 +194,12 @@ export default function AnnotateLinkPage() {
     
     try {
       setSaving(true);
-      setSavingProgress('保存中...');
+      const totalFaces = faces.length;
+      
+      for (let i = 0; i <= totalFaces; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setSavingProgress(`保存中 ${i}/${totalFaces}`);
+      }
       
       const response = await fetch('/api/photos/annotate', {
         method: 'POST',
