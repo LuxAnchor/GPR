@@ -185,22 +185,6 @@ export default function AnnotateLinkPage() {
   };
 
   const deleteFace = async (index: number) => {
-    const face = faces[index];
-    if (face.id) {
-      try {
-        const response = await fetch(`/api/photos/faces/${face.id}`, {
-          method: 'DELETE',
-        });
-        
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || '删除失败');
-        }
-      } catch (err) {
-        alert(err instanceof Error ? err.message : '删除失败');
-        return;
-      }
-    }
     setFaces(prev => prev.filter((_, i) => i !== index));
     setSelectedFace(null);
   };
@@ -210,37 +194,30 @@ export default function AnnotateLinkPage() {
     
     try {
       setSaving(true);
-      
-      const newFaces = faces.filter(f => f.isNew && !f.id);
-      const existingFaces = faces.filter(f => f.id);
-      const totalFaces = existingFaces.length + newFaces.length;
-      let savedCount = 0;
-      
-      for (const face of existingFaces) {
-        savedCount++;
-        setSavingProgress(`${savedCount}/${totalFaces}`);
-        await fetch(`/api/photos/faces/${face.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ x: face.x, y: face.y, width: face.width, height: face.height, name: face.name }),
-        });
-      }
-      
-      for (const face of newFaces) {
-        savedCount++;
-        setSavingProgress(`${savedCount}/${totalFaces}`);
-        await fetch('/api/photos/faces', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo_id: photo.id, x: face.x, y: face.y, width: face.width, height: face.height, name: face.name }),
-        });
-      }
+      setSavingProgress('保存中...');
       
       const response = await fetch('/api/photos/annotate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ annotate_code: code, annotate_view_code: annotateViewCode }),
+        body: JSON.stringify({ 
+          annotate_code: code, 
+          annotate_view_code: annotateViewCode,
+          action: 'save',
+          faces: faces.map(f => ({
+            id: f.id,
+            x: f.x,
+            y: f.y,
+            width: f.width,
+            height: f.height,
+            name: f.name
+          }))
+        }),
       });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '保存失败');
+      }
       
       const updatedPhoto = await response.json();
       setPhoto(updatedPhoto);
@@ -350,14 +327,14 @@ export default function AnnotateLinkPage() {
           </div>
           <button
             onClick={saveFaces}
-            disabled={saving || faces.length === 0}
+            disabled={saving || faces.length === 0 || photo.islocked === 1}
             className="flex items-center px-3 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 touch-manipulation"
           >
             {saving ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1 sm:mr-2"></div>
-                <span className="hidden sm:inline">{savingProgress ? `保存中 ${savingProgress}` : '保存中...'}</span>
-                <span className="sm:hidden">{savingProgress ? savingProgress : '保存'}</span>
+                <span className="hidden sm:inline">{savingProgress}</span>
+                <span className="sm:hidden">{savingProgress}</span>
               </>
             ) : (
               <>
@@ -386,59 +363,61 @@ export default function AnnotateLinkPage() {
               </div>
               
               <div
-                className="relative overflow-hidden bg-gray-100 rounded-lg cursor-crosshair"
-                onClick={handlePhotoClick}
-              >
-                <img
-                  ref={imageRef}
-                  src={photo.filepath}
-                  alt={photo.display_name || photo.originalname}
-                  className="w-full h-auto"
-                  draggable={false}
-                  crossOrigin="anonymous"
-                />
+              className={`relative overflow-hidden bg-gray-100 rounded-lg ${photo.islocked === 1 ? 'cursor-not-allowed' : 'cursor-crosshair'}`}
+              onClick={photo.islocked === 1 ? undefined : handlePhotoClick}
+            >
+              <img
+                ref={imageRef}
+                src={photo.filepath}
+                alt={photo.display_name || photo.originalname}
+                className="w-full h-auto"
+                draggable={false}
+                crossOrigin="anonymous"
+              />
+              
+              {faces.map((face, index) => {
+                const display = getDisplayBox(face);
+                if (!display) return null;
                 
-                {faces.map((face, index) => {
-                  const display = getDisplayBox(face);
-                  if (!display) return null;
-                  
-                  const isSelected = selectedFace === (face.id || `new-${index}`);
-                  
-                  return (
-                    <div
-                      key={face.id || `new-${index}`}
-                      className={`absolute border-2 rounded cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-blue-500 bg-blue-500/20 ring-2 ring-blue-300'
-                          : 'border-green-500 bg-green-500/10'
-                      }`}
-                      style={{
-                        left: display.left,
-                        top: display.top,
-                        width: Math.max(display.width, 30),
-                        height: Math.max(display.height, 30),
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                const isSelected = selectedFace === (face.id || `new-${index}`);
+                
+                return (
+                  <div
+                    key={face.id || `new-${index}`}
+                    className={`absolute border-2 rounded cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-500/20 ring-2 ring-blue-300'
+                        : 'border-green-500 bg-green-500/10'
+                    }`}
+                    style={{
+                      left: display.left,
+                      top: display.top,
+                      width: Math.max(display.width, 30),
+                      height: Math.max(display.height, 30),
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (photo.islocked !== 1) {
                         setSelectedFace(face.id || `new-${index}`);
-                      }}
-                    >
-                      {isSelected && (
-                        <>
-                          <div className="absolute -top-8 left-0 bg-blue-600 text-white px-2 py-1 rounded text-xs">
-                            人脸 {index + 1}
-                          </div>
-                          {/* 添加调整控制点 */}
-                          <div className="absolute -top-2 -left-2 w-4 h-4 bg-blue-600 rounded-full cursor-nw-resize" />
-                          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-600 rounded-full cursor-ne-resize" />
-                          <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-blue-600 rounded-full cursor-sw-resize" />
-                          <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-600 rounded-full cursor-se-resize" />
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      }
+                    }}
+                  >
+                    {isSelected && (
+                      <>
+                        <div className="absolute -top-8 left-0 bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                          人脸 {index + 1}
+                        </div>
+                        {/* 添加调整控制点 */}
+                        <div className="absolute -top-2 -left-2 w-4 h-4 bg-blue-600 rounded-full cursor-nw-resize" />
+                        <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-600 rounded-full cursor-ne-resize" />
+                        <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-blue-600 rounded-full cursor-sw-resize" />
+                        <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-600 rounded-full cursor-se-resize" />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
             </div>
           </div>
 
@@ -468,7 +447,11 @@ export default function AnnotateLinkPage() {
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200'
                       }`}
-                      onClick={() => setSelectedFace(face.id || `new-${index}`)}
+                      onClick={() => {
+                        if (photo.islocked !== 1) {
+                          setSelectedFace(face.id || `new-${index}`);
+                        }
+                      }}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0">
@@ -490,23 +473,30 @@ export default function AnnotateLinkPage() {
                             <span className="font-medium text-sm">
                               人脸 {index + 1}
                             </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteFace(index);
-                              }}
-                              className="text-red-600 hover:text-red-700 p-1"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {photo.islocked !== 1 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteFace(index);
+                                }}
+                                className="text-red-600 hover:text-red-700 p-1"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                           
                           <input
                             type="text"
                             value={face.name}
-                            onChange={(e) => updateFace(index, { name: e.target.value })}
+                            onChange={(e) => {
+                              if (photo.islocked !== 1) {
+                                updateFace(index, { name: e.target.value });
+                              }
+                            }}
                             placeholder="输入姓名"
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2"
+                            disabled={photo.islocked === 1}
+                            className={`w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 ${photo.islocked === 1 ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -517,12 +507,12 @@ export default function AnnotateLinkPage() {
               )}
               
               {photo.islocked === 1 ? (
-                <div className="mt-4 p-4 bg-green-50 rounded-lg text-green-800 text-sm">
-                  ✓ 此照片已被管理员锁定！
+                <div className="mt-4 p-4 bg-red-50 rounded-lg text-red-800 text-sm">
+                ⚠ 照片已锁定，标注链接不可访问，请联系管理员
                 </div>
               ) : (
                 <div className="mt-4 p-4 bg-yellow-50 rounded-lg text-yellow-800 text-sm">
-                  ⚠ 此照片尚未锁定，管理员将在审核后锁定！
+                💡 直接修改并保存，无需审核，自动同步到名单
                 </div>
               )}
             </div>
